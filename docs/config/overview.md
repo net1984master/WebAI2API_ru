@@ -26,6 +26,9 @@ backend:
     failover:
       enabled: true
       maxRetries: 2
+      imgDlRetry: false 
+      imgDlRetryMaxRetries: 2
+    waitTimeout: 120000
     instances:
       - name: "browser_default"
         workers:
@@ -156,6 +159,9 @@ browser:
 | `strategy` | string | `least_busy` | 负载均衡策略，可选：`least_busy` |
 | `failover.enabled` | boolean | `true` | 是否启用故障自动转移 |
 | `failover.maxRetries` | number | `2` | 故障转移最大重试次数 |
+| `failover.imgDlRetry` | boolean | `false` | 图片下载重试，启用后，图片/视频下载失败时会自动重试下载（不重新生成） |
+| `failover.imgDlRetryMaxRetries` | number | `2` | 下载重试次数，图片下载失败时的最大重试次数，范围 1-10 |
+| `waitTimeout` | number | `120000` | 生成等待时间，程序等待生成结果返回的最大超时时间，单位毫秒 |
 | `instances` | array | - | 浏览器实例列表，详见 [实例配置](/config/instances) |
 
 ### 适配器配置 (backend.adapter)

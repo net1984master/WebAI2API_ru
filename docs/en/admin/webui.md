@@ -67,7 +67,10 @@ The VNC display feature requires the service to be running in Xvfb + VNC mode.
 
 ### Instance Management
 
-Manage browser instance and Worker configurations (requires a restart to take effect).
+- Batch manage instance proxies and deletions
+- Manage browser instance and Worker configurations
+
+> Requires a restart to take effect
 
 ## Quick Actions
 

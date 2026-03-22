@@ -160,6 +160,9 @@ Performance optimization options for CPU-Only environments. Reduces CPU load by 
 | `strategy` | string | `least_busy` | Load balancing strategy. Option: `least_busy`. |
 | `failover.enabled` | boolean | `true` | Whether to enable automatic failover. |
 | `failover.maxRetries` | number | `2` | Maximum retry attempts for failover. |
+| `failover.imgDlRetry` | boolean | `false` | Image download retry. When enabled, automatically retries downloading the image/video upon failure (without regenerating). |
+| `failover.imgDlRetryMaxRetries` | number | `2` | Download retry count. The maximum number of retry attempts when an image download fails, range 1-10. |
+| `waitTimeout` | number | `120000` | Generation wait time. The maximum timeout in milliseconds the program waits for the generation result to return. |
 | `instances` | array | - | List of browser instances. See [Instances Configuration](/en/config/instances). |
 
 ### Adapter Configuration (backend.adapter)
