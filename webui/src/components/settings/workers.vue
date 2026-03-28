@@ -87,6 +87,9 @@ const instanceData = computed({
     set: (val) => { settingsStore.workerConfig = val; }
 });
 
+// 获取实例唯一标识（优先 id，没有则用 name）
+const getInstanceKey = (inst) => inst.id || inst.name;
+
 // 批量选择
 const selectedRowKeys = ref([]);
 const rowSelection = computed(() => ({
@@ -121,7 +124,7 @@ const openBatchProxy = () => {
 
 const handleBatchProxySave = async () => {
     const newList = (instanceData.value || []).map(inst => {
-        if (!selectedRowKeys.value.includes(inst.id)) return inst;
+        if (!selectedRowKeys.value.includes(getInstanceKey(inst))) return inst;
         return {
             ...inst,
             proxy: batchProxyForm.value.proxy ? {
@@ -152,7 +155,7 @@ const handleBatchDelete = () => {
         cancelText: '取消',
         async onOk() {
             const newList = (instanceData.value || []).filter(
-                inst => !selectedRowKeys.value.includes(inst.id)
+                inst => !selectedRowKeys.value.includes(getInstanceKey(inst))
             );
             const success = await settingsStore.saveWorkerConfig(newList);
             if (success) {
@@ -225,7 +228,8 @@ const handleEdit = (record) => {
 
 // 删除实例
 const handleDelete = async (record) => {
-    const newList = instanceData.value.filter(item => item.id !== record.id);
+    const key = getInstanceKey(record);
+    const newList = instanceData.value.filter(item => getInstanceKey(item) !== key);
     await settingsStore.saveWorkerConfig(newList);
 };
 
@@ -233,7 +237,6 @@ const handleDelete = async (record) => {
 const handleSaveEdit = async () => {
     // 构建要保存的对象结构
     const instanceToSave = {
-        id: editingInstance.value ? editingInstance.value.id : `inst_${Date.now()}`,
         name: editForm.value.name,
         userDataMark: editForm.value.userDataMark,
         workers: editForm.value.workers,
@@ -254,8 +257,9 @@ const handleSaveEdit = async () => {
         // 创建
         newList.push(instanceToSave);
     } else {
-        // 更新
-        const index = newList.findIndex(item => item.id === editingInstance.value.id);
+        // 更新 - 用唯一标识查找
+        const editingKey = getInstanceKey(editingInstance.value);
+        const index = newList.findIndex(item => getInstanceKey(item) === editingKey);
         if (index > -1) {
             newList[index] = instanceToSave;
         }
@@ -371,8 +375,7 @@ const handleRemoveWorker = (index) => {
                                         故障转移时最大重试次数，范围 1-10
                                     </div>
                                     <a-input-number v-model:value="poolConfig.failover.maxRetries" :min="1" :max="10"
-                                        :disabled="!poolConfig.failover.enabled" style="width: 100%"
-                                        placeholder="请输入重试次数" />
+                                        :disabled="!poolConfig.failover.enabled" style="width: 100%" placeholder="请输入重试次数" />
                                 </div>
                             </a-col>
                         </a-row>
@@ -435,8 +438,8 @@ const handleRemoveWorker = (index) => {
             </template>
 
             <!-- 实例表格 -->
-            <a-table :columns="columns" :data-source="instanceData" :pagination="false" :row-selection="rowSelection"
-                row-key="id">
+            <a-table :columns="columns" :data-source="instanceData" :pagination="false"
+                :row-selection="rowSelection" :row-key="record => record.id || record.name">
                 <template #bodyCell="{ column, record }">
                     <!-- 实例名称 -->
                     <template v-if="column.key === 'name'">
@@ -634,23 +637,21 @@ const handleRemoveWorker = (index) => {
             </template>
         </a-modal>
 
-        <!-- 批量代理设置弹窗 -->
-        <a-modal v-model:open="batchProxyVisible" title="批量设置代理" okText="应用" cancelText="取消" @ok="handleBatchProxySave">
+        <!-- 批量代理设置模态框 -->
+        <a-modal v-model:open="batchProxyVisible" title="批量设置代理" okText="确定" cancelText="取消"
+            @ok="handleBatchProxySave">
+            <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 16px;">
+                将对选中的 {{ selectedRowKeys.length }} 个实例统一设置代理
+            </div>
             <div style="margin-bottom: 16px;">
-                <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 16px;">
-                    将对选中的 {{ selectedRowKeys.length }} 个实例统一设置代理
-                </div>
+                <a-switch v-model:checked="batchProxyForm.proxy" />
+                <span style="margin-left: 8px;">
+                    {{ batchProxyForm.proxy ? '启用代理' : '禁用代理' }}
+                </span>
+            </div>
 
-                <!-- 是否启用代理 -->
+            <template v-if="batchProxyForm.proxy">
                 <div style="margin-bottom: 16px;">
-                    <a-switch v-model:checked="batchProxyForm.proxy" />
-                    <span style="margin-left: 8px;">
-                        {{ batchProxyForm.proxy ? '启用代理' : '关闭代理（将清除选中实例的代理配置）' }}
-                    </span>
-                </div>
-
-                <!-- 代理类型 -->
-                <div style="margin-bottom: 16px;" v-if="batchProxyForm.proxy">
                     <div style="font-weight: 600; margin-bottom: 8px;">代理类型</div>
                     <a-segmented v-model:value="batchProxyForm.proxyType" block :options="[
                         { label: 'SOCKS5', value: 'socks5' },
@@ -658,21 +659,18 @@ const handleRemoveWorker = (index) => {
                     ]" style="width: 100%" />
                 </div>
 
-                <!-- 服务器地址 -->
-                <div style="margin-bottom: 16px;" v-if="batchProxyForm.proxy">
+                <div style="margin-bottom: 16px;">
                     <div style="font-weight: 600; margin-bottom: 8px;">服务器地址</div>
                     <a-input v-model:value="batchProxyForm.proxyHost" placeholder="例如: 127.0.0.1" />
                 </div>
 
-                <!-- 端口 -->
-                <div style="margin-bottom: 16px;" v-if="batchProxyForm.proxy">
+                <div style="margin-bottom: 16px;">
                     <div style="font-weight: 600; margin-bottom: 8px;">端口</div>
-                    <a-input-number v-model:value="batchProxyForm.proxyPort" :min="1" :max="65535" style="width: 100%"
-                        placeholder="例如: 1080" />
+                    <a-input-number v-model:value="batchProxyForm.proxyPort" :min="1" :max="65535"
+                        style="width: 100%" placeholder="例如: 1080" />
                 </div>
 
-                <!-- 身份验证 -->
-                <div style="margin-bottom: 16px;" v-if="batchProxyForm.proxy">
+                <div style="margin-bottom: 16px;">
                     <div style="font-weight: 600; margin-bottom: 8px;">身份验证</div>
                     <a-switch v-model:checked="batchProxyForm.proxyAuth" />
                     <span style="margin-left: 8px;">
@@ -680,18 +678,16 @@ const handleRemoveWorker = (index) => {
                     </span>
                 </div>
 
-                <!-- 用户名 -->
-                <div style="margin-bottom: 16px;" v-if="batchProxyForm.proxy && batchProxyForm.proxyAuth">
+                <div style="margin-bottom: 16px;" v-if="batchProxyForm.proxyAuth">
                     <div style="font-weight: 600; margin-bottom: 8px;">用户名</div>
                     <a-input v-model:value="batchProxyForm.proxyUsername" placeholder="请输入用户名" />
                 </div>
 
-                <!-- 密码 -->
-                <div style="margin-bottom: 16px;" v-if="batchProxyForm.proxy && batchProxyForm.proxyAuth">
+                <div style="margin-bottom: 16px;" v-if="batchProxyForm.proxyAuth">
                     <div style="font-weight: 600; margin-bottom: 8px;">密码</div>
                     <a-input-password v-model:value="batchProxyForm.proxyPassword" placeholder="请输入密码" />
                 </div>
-            </div>
+            </template>
         </a-modal>
     </a-layout>
 </template>
