@@ -49,7 +49,32 @@ async function generate(context, prompt, imgPaths, modelId, meta = {}) {
         const inputLocator = page.locator('textarea[data-testid="chat_input_input"]');
         await waitForInput(page, inputLocator, { click: false });
 
-        // 2. 上传图片 (如果有)
+        // 2. 选择模型
+        const modelMenuName = MODEL_MENU_MAP[modelId] || MODEL_MENU_MAP['seed'];
+        logger.debug('适配器', `选择模型: ${modelId} -> ${String(modelMenuName)}`, meta);
+        await sleep(300, 500);
+
+        // 给予 1 秒的缓冲时间等待 React 渲染按钮
+        const modelSelectorBtn = page.locator('button[aria-haspopup="menu"]:visible:has([data-testid="deep-thinking-action-button"], [data-testid="mode-select-action-button"])').first();
+        let selectorExists = false;
+        try {
+            await modelSelectorBtn.waitFor({ state: 'attached', timeout: 1000 });
+            selectorExists = true;
+        } catch (e) {
+            selectorExists = false;
+        }
+
+        if (selectorExists) {
+            await safeClick(page, modelSelectorBtn, { bias: 'button' });
+            await sleep(300, 500);
+
+            const menuItem = page.getByRole('menuitem', { name: modelMenuName });
+            await menuItem.waitFor({ state: 'visible', timeout: 5000 });
+            await safeClick(page, menuItem, { bias: 'button' });
+            await sleep(200, 400);
+        }
+
+        // 3. 上传图片 (如果有)
         if (imgPaths && imgPaths.length > 0) {
             logger.info('适配器', `开始上传 ${imgPaths.length} 张图片...`, meta);
 
@@ -98,30 +123,6 @@ async function generate(context, prompt, imgPaths, modelId, meta = {}) {
             }
 
             logger.info('适配器', '图片上传完成', meta);
-        }
-
-        // 3. 选择模型
-        const modelMenuName = MODEL_MENU_MAP[modelId] || MODEL_MENU_MAP['seed'];
-        logger.debug('适配器', `选择模型: ${modelId} -> ${String(modelMenuName)}`, meta);
-
-        // 给予 3 秒的缓冲时间等待 React 渲染按钮
-        const modelSelectorBtn = page.locator('button[aria-haspopup="menu"]:visible:has([data-testid="deep-thinking-action-button"], [data-testid="mode-select-action-button"])').first();
-        let selectorExists = false;
-        try {
-            await modelSelectorBtn.waitFor({ state: 'attached', timeout: 3000 });
-            selectorExists = true;
-        } catch (e) {
-            selectorExists = false;
-        }
-
-        if (selectorExists) {
-            await safeClick(page, modelSelectorBtn, { bias: 'button' });
-            await sleep(300, 500);
-
-            const menuItem = page.getByRole('menuitem', { name: modelMenuName });
-            await menuItem.waitFor({ state: 'visible', timeout: 5000 });
-            await safeClick(page, menuItem, { bias: 'button' });
-            await sleep(200, 400);
         }
 
         // 4. 填写提示词
