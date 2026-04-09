@@ -19,7 +19,7 @@ const loading = ref(false);
 
 const handleLogin = async () => {
     if (!token.value) {
-        message.warning('请输入 Token');
+        message.warning('Введите токен');
         return;
     }
 
@@ -30,15 +30,15 @@ const handleLogin = async () => {
 
         const success = await settingsStore.checkAuth();
         if (success) {
-            message.success('验证成功');
+            message.success('Авторизация успешна');
             emit('success');
             emit('update:visible', false);
         } else {
-            message.error('Token 验证失败，请检查是否正确');
+            message.error('Ошибка токена, проверьте правильность');
             settingsStore.setToken(originalToken);
         }
     } catch (e) {
-        message.error('验证过程发生错误');
+        message.error('Ошибка при проверке авторизации');
     } finally {
         loading.value = false;
     }
@@ -46,7 +46,7 @@ const handleLogin = async () => {
 </script>
 
 <template>
-    <a-modal :open="visible" title="需要身份验证" :closable="false" :maskClosable="false" :footer="null" width="400px"
+    <a-modal :open="visible" title="Требуется авторизация" :closable="false" :maskClosable="false" :footer="null" width="400px"
         centered>
         <div style="padding: 20px 0;">
             <div style="text-align: center; margin-bottom: 24px;">
@@ -56,16 +56,16 @@ const handleLogin = async () => {
                     </template>
                 </a-avatar>
                 <div style="margin-top: 16px; font-size: 16px; font-weight: 500;">
-                    WebAI2API 管理面板
+                    Панель управления WebAI2API
                 </div>
                 <div style="color: #8c8c8c; margin-top: 8px;">
-                    请输入访问 API Token 以继续
+                    Введите API Token для продолжения
                 </div>
             </div>
 
             <a-form layout="vertical">
                 <a-form-item label="API Token">
-                    <a-input-password v-model:value="token" placeholder="请输入 API Token" size="large"
+                    <a-input-password v-model:value="token" placeholder="Введите API Token" size="large"
                         @pressEnter="handleLogin">
                         <template #prefix>
                             <LockOutlined style="color: rgba(0,0,0,.25)" />
@@ -74,7 +74,7 @@ const handleLogin = async () => {
                 </a-form-item>
 
                 <a-button type="primary" block size="large" :loading="loading" @click="handleLogin">
-                    验证并登录
+                    Войти
                 </a-button>
             </a-form>
         </div>

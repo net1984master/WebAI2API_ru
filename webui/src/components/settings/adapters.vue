@@ -10,13 +10,13 @@ const drawerVisible = ref(false);
 const currentAdapter = ref(null);
 const currentConfig = reactive({});
 
-// 模型过滤配置
+// Конфигурация фильтрации моделей
 const modelFilter = reactive({
     mode: 'blacklist',
     list: []
 });
 
-// 挂载时获取数据
+// Загрузка данных при монтировании
 onMounted(async () => {
     await Promise.all([
         settingsStore.fetchAdaptersMeta(),
@@ -24,10 +24,10 @@ onMounted(async () => {
     ]);
 });
 
-// 适配器列表
+// Список адаптеров
 const adapters = computed(() => settingsStore.adaptersMeta);
 
-// 检查模型是否启用
+// Проверить, включена ли модель
 const isModelEnabled = (modelId) => {
     const inList = modelFilter.list.includes(modelId);
     if (modelFilter.mode === 'whitelist') {
@@ -37,19 +37,19 @@ const isModelEnabled = (modelId) => {
     }
 };
 
-// 切换模型启用/禁用
+// Переключить состояние модели
 const toggleModel = (modelId, enabled) => {
     const idx = modelFilter.list.indexOf(modelId);
 
     if (modelFilter.mode === 'whitelist') {
-        // 白名单模式：启用=加入列表，禁用=移出列表
+        // Белый список: включить=добавить, выключить=удалить
         if (enabled && idx === -1) {
             modelFilter.list.push(modelId);
         } else if (!enabled && idx !== -1) {
             modelFilter.list.splice(idx, 1);
         }
     } else {
-        // 黑名单模式：禁用=加入列表，启用=移出列表
+        // Чёрный список: выключить=добавить, включить=удалить
         if (!enabled && idx === -1) {
             modelFilter.list.push(modelId);
         } else if (enabled && idx !== -1) {
@@ -58,7 +58,7 @@ const toggleModel = (modelId, enabled) => {
     }
 };
 
-// 切换模式时重置列表
+// Сбросить список при смене режима
 const onModeChange = (newMode) => {
     if (newMode !== modelFilter.mode) {
         modelFilter.mode = newMode;
@@ -66,16 +66,16 @@ const onModeChange = (newMode) => {
     }
 };
 
-// 打开抽屉进行编辑
+// Открыть панель редактирования
 const handleEdit = (adapter) => {
     currentAdapter.value = adapter;
-    // 加载现有配置或默认值
+    // Загрузить текущие настройки или дефолты
     const existing = settingsStore.adapterConfig[adapter.id] || {};
 
-    // 重置当前配置表单
+    // Сбросить форму
     Object.keys(currentConfig).forEach(key => delete currentConfig[key]);
 
-    // 使用现有值或schema中的默认值初始化表单
+    // Инициализировать форму из текущих значений или дефолтов
     if (adapter.configSchema) {
         adapter.configSchema.forEach(field => {
             if (existing[field.key] !== undefined) {
@@ -86,7 +86,7 @@ const handleEdit = (adapter) => {
         });
     }
 
-    // 初始化模型过滤配置
+    // Инициализировать конфигурацию фильтрации
     const filter = adapter.modelFilter || { mode: 'blacklist', list: [] };
     modelFilter.mode = filter.mode || 'blacklist';
     modelFilter.list = [...(filter.list || [])];
@@ -94,7 +94,7 @@ const handleEdit = (adapter) => {
     drawerVisible.value = true;
 };
 
-// 保存配置
+// Сохранить конфигурацию
 const handleSave = async () => {
     if (!currentAdapter.value) return;
 
@@ -110,7 +110,7 @@ const handleSave = async () => {
 
     const success = await settingsStore.saveAdapterConfig(configToSave);
     if (success) {
-        // 更新本地缓存
+        // Обновить локальный кэш
         const adapter = settingsStore.adaptersMeta.find(a => a.id === currentAdapter.value.id);
         if (adapter) {
             adapter.modelFilter = { mode: modelFilter.mode, list: [...modelFilter.list] };
@@ -122,9 +122,9 @@ const handleSave = async () => {
 
 <template>
     <a-layout style="background: transparent;">
-        <a-card title="适配器管理" :bordered="false">
+        <a-card title="Адаптеры" :bordered="false">
             <template #extra>
-                <a-button type="link" @click="settingsStore.fetchAdaptersMeta">刷新列表</a-button>
+                <a-button type="link" @click="settingsStore.fetchAdaptersMeta">Обновить</a-button>
             </template>
 
             <a-list :grid="{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 3, xl: 4, xxl: 4 }" :data-source="adapters">
@@ -147,31 +147,31 @@ const handleSave = async () => {
             </a-list>
         </a-card>
 
-        <!-- 配置抽屉 -->
-        <a-drawer v-if="currentAdapter" v-model:open="drawerVisible" :title="`配置适配器 - ${currentAdapter.id}`" width="500"
+        <!-- Панель конфигурации -->
+        <a-drawer v-if="currentAdapter" v-model:open="drawerVisible" :title="`Настройка адаптера — ${currentAdapter.id}`" width="500"
             placement="right">
-            <!-- 适配器描述 -->
+            <!-- Описание адаптера -->
             <div v-if="currentAdapter.description"
                 style="margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px; color: #666; font-size: 13px; line-height: 1.6;">
                 {{ currentAdapter.description }}
             </div>
 
-            <!-- 模型管理折叠面板 -->
+            <!-- Управление моделями -->
             <a-collapse v-if="currentAdapter.models && currentAdapter.models.length > 0" style="margin-bottom: 16px;">
-                <a-collapse-panel key="models" header="模型管理">
-                    <!-- 模式选择 -->
+                <a-collapse-panel key="models" header="Управление моделями">
+                    <!-- Выбор режима -->
                     <div style="margin-bottom: 12px;">
-                        <span style="margin-right: 12px; color: #666;">过滤模式:</span>
+                        <span style="margin-right: 12px; color: #666;">Режим фильтра:</span>
                         <a-radio-group :value="modelFilter.mode" @change="e => onModeChange(e.target.value)">
-                            <a-radio value="blacklist">黑名单</a-radio>
-                            <a-radio value="whitelist">白名单</a-radio>
+                            <a-radio value="blacklist">Чёрный список</a-radio>
+                            <a-radio value="whitelist">Белый список</a-radio>
                         </a-radio-group>
                     </div>
                     <div style="font-size: 12px; color: #999; margin-bottom: 12px;">
-                        {{ modelFilter.mode === 'blacklist' ? '关闭的模型将被禁用，其他模型可用' : '仅开启的模型可用，其他模型禁用' }}
+                        {{ modelFilter.mode === 'blacklist' ? 'Отключённые модели недоступны, остальные работают' : 'Только включённые модели доступны, остальные отключены' }}
                     </div>
 
-                    <!-- 模型列表 -->
+                    <!-- Список моделей -->
                     <div style="max-height: 300px; overflow-y: auto;">
                         <div v-for="modelId in currentAdapter.models" :key="modelId"
                             style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
@@ -183,28 +183,28 @@ const handleSave = async () => {
                 </a-collapse-panel>
             </a-collapse>
 
-            <!-- 其他配置项 -->
+            <!-- Другие параметры -->
             <div v-if="!currentAdapter.configSchema || currentAdapter.configSchema.length === 0">
-                <a-empty v-if="!currentAdapter.models || currentAdapter.models.length === 0" description="该适配器没有可配置项" />
+                <a-empty v-if="!currentAdapter.models || currentAdapter.models.length === 0" description="Нет настраиваемых параметров" />
             </div>
 
             <a-form layout="vertical" v-if="currentAdapter.configSchema && currentAdapter.configSchema.length > 0">
                 <template v-for="field in currentAdapter.configSchema" :key="field.key">
                     <a-form-item :label="field.label" :required="field.required">
-                        <!-- 字符串输入 -->
+                        <!-- Строковый ввод -->
                         <a-input v-if="field.type === 'string'" v-model:value="currentConfig[field.key]"
                             :placeholder="field.placeholder" />
 
-                        <!-- 数字输入 -->
+                        <!-- Числовой ввод -->
                         <a-input-number v-if="field.type === 'number'" v-model:value="currentConfig[field.key]"
                             :min="field.min" :max="field.max" style="width: 100%;" />
 
-                        <!-- 布尔开关 -->
+                        <!-- Переключатель -->
                         <div v-if="field.type === 'boolean'">
                             <a-switch v-model:checked="currentConfig[field.key]" />
                         </div>
 
-                        <!-- 下拉选择 -->
+                        <!-- Выпадающий список -->
                         <a-select v-if="field.type === 'select'" v-model:value="currentConfig[field.key]"
                             :options="field.options" />
 
@@ -217,8 +217,8 @@ const handleSave = async () => {
 
             <template #footer>
                 <div style="text-align: right;">
-                    <a-button style="margin-right: 8px" @click="drawerVisible = false">取消</a-button>
-                    <a-button type="primary" @click="handleSave">保存配置</a-button>
+                    <a-button style="margin-right: 8px" @click="drawerVisible = false">Отмена</a-button>
+                    <a-button type="primary" @click="handleSave">Сохранить</a-button>
                 </div>
             </template>
         </a-drawer>

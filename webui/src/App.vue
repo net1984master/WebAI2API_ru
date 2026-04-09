@@ -39,7 +39,7 @@ const enterIconLoading = () => {
   }, 500);
 };
 
-// 接口测试抽屉
+// Панель тестирования API
 const apiTestDrawer = ref(false);
 const apiTestResults = ref({
   models: { status: 'pending', data: null, error: null },
@@ -53,7 +53,7 @@ const chatImageList = ref([]);
 const chatStreamMode = ref(false);
 const chatStreamContent = ref('');
 
-// 获取模型列表
+// Получить список моделей
 const fetchModelList = async () => {
   try {
     const res = await fetch('/v1/models', { headers: settingsStore.getHeaders() });
@@ -65,11 +65,11 @@ const fetchModelList = async () => {
       }
     }
   } catch (e) {
-    console.error('获取模型列表失败', e);
+    console.error('Ошибка получения списка моделей', e);
   }
 };
 
-// 图片转 base64
+// Конвертация в base64
 const fileToBase64 = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -79,21 +79,21 @@ const fileToBase64 = (file) => {
   });
 };
 
-// 图片上传前检查
+// Проверка перед загрузкой
 const beforeUpload = (file) => {
   const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
   if (!allowedTypes.includes(file.type)) {
-    message.error('仅支持 PNG, JPEG, GIF, WebP 格式');
+    message.error('Поддерживаются только PNG, JPEG, GIF, WebP');
     return false;
   }
   if (chatImageList.value.length >= 10) {
-    message.error('最多上传 10 张图片');
+    message.error('Максимум 10 изображений');
     return false;
   }
-  return false; // 阻止自动上传，手动处理
+  return false; // Блокировать автозагрузку, обрабатываем вручную
 };
 
-// 处理图片选择
+// Обработка выбора изображения
 const handleImageChange = async (info) => {
   const file = info.file;
   if (file.status === 'removed') {
@@ -108,11 +108,11 @@ const handleImageChange = async (info) => {
       base64
     });
   } catch (e) {
-    message.error('图片读取失败');
+    message.error('Ошибка чтения изображения');
   }
 };
 
-// 将 base64 转换为 blob URL
+// Конвертация base64 в blob URL
 const base64ToBlob = (dataUri) => {
   const arr = dataUri.split(',');
   const mime = arr[0].match(/:(.*?);/)[1];
@@ -125,11 +125,11 @@ const base64ToBlob = (dataUri) => {
   return URL.createObjectURL(new Blob([u8arr], { type: mime }));
 };
 
-// 解析内容中的 Markdown 图片和直接的视频 data URI
+// Разбор Markdown-изображений и data URI видео
 const parseMarkdownImages = (content) => {
   if (!content) return { text: '', images: [], videos: [] };
 
-  // 检测是否是直接的 data:video/ 内容（非 markdown 格式）
+  // Проверить, является ли содержимое data:video/ URI
   if (content.trim().startsWith('data:video/')) {
     try {
       const blobUrl = base64ToBlob(content.trim());
@@ -139,7 +139,7 @@ const parseMarkdownImages = (content) => {
         videos: [{ src: blobUrl, type: 'video/mp4' }]
       };
     } catch (e) {
-      console.error('视频转换失败', e);
+      console.error('Ошибка конвертации видео', e);
       return { text: content, images: [], videos: [] };
     }
   }
@@ -151,14 +151,14 @@ const parseMarkdownImages = (content) => {
   let textParts = [];
 
   while ((match = imageRegex.exec(content)) !== null) {
-    // 添加图片之前的文本
+    // Добавить текст перед изображением
     if (match.index > lastIndex) {
       textParts.push(content.substring(lastIndex, match.index));
     }
 
-    // 添加图片
+    // Добавить изображение
     images.push({
-      alt: match[1] || '图片',
+      alt: match[1] || 'Изображение',
       src: match[2],
       type: 'image'
     });
@@ -166,7 +166,7 @@ const parseMarkdownImages = (content) => {
     lastIndex = imageRegex.lastIndex;
   }
 
-  // 添加剩余文本
+  // Добавить оставшийся текст
   if (lastIndex < content.length) {
     textParts.push(content.substring(lastIndex));
   }
@@ -195,10 +195,10 @@ const testApi = async (type) => {
     } else if (type === 'chat') {
       url = '/v1/chat/completions';
 
-      // 构建消息内容
+      // Построение содержимого сообщения
       let content;
       if (chatImageList.value.length > 0) {
-        // 多模态请求
+        // Мультимодальный запрос
         content = [
           { type: 'text', text: chatTestPrompt.value }
         ];
@@ -222,7 +222,7 @@ const testApi = async (type) => {
         })
       };
 
-      // 流式请求处理
+      // Обработка потокового запрос
       if (chatStreamMode.value) {
         const res = await fetch(url, options);
         if (!res.ok) {
@@ -250,7 +250,7 @@ const testApi = async (type) => {
                 const json = JSON.parse(data);
                 const delta = json.choices?.[0]?.delta?.content || '';
                 chatStreamContent.value += delta;
-              } catch { /* 忽略解析错误 */ }
+              } catch { /* Игнорировать ошибки парсинга */ }
             }
           }
         }
@@ -266,7 +266,7 @@ const testApi = async (type) => {
 
     if (res.ok) {
       apiTestResults.value[type].status = 'success';
-      // Chat 接口：提取 content
+      // Chat: извлечь content
       if (type === 'chat' && data.choices?.[0]?.message?.content) {
         apiTestResults.value[type].data = { content: data.choices[0].message.content };
       } else {
@@ -284,16 +284,16 @@ const testApi = async (type) => {
 
 const openApiTestDrawer = () => {
   apiTestDrawer.value = true;
-  // 重置状态
+  // Сбросить состояние
   Object.keys(apiTestResults.value).forEach(key => {
     apiTestResults.value[key] = { status: 'pending', data: null, error: null };
   });
   chatImageList.value = [];
-  // 获取模型列表
+  // Получить список моделей
   fetchModelList();
 };
 
-// 菜单 key 到路由路径的映射
+// Сопоставление ключей меню и путей маршрутов
 const menuRoutes = {
   'dash': '/',
   'history': '/tools/request',
@@ -306,7 +306,7 @@ const menuRoutes = {
   'tools-logs': '/tools/logs'
 };
 
-// 处理菜单点击
+// Обработка клика по меню
 const handleMenuClick = ({ key }) => {
   const route = menuRoutes[key];
   if (route) {
@@ -317,7 +317,7 @@ const handleMenuClick = ({ key }) => {
 
 const isInitializing = ref(true);
 
-// 后端连接检测
+// Проверка соединения с сервером
 let connectionCheckInterval = null;
 let disconnectModalShown = false;
 
@@ -328,7 +328,7 @@ async function checkConnection() {
       signal: AbortSignal.timeout(5000)
     });
     if (res.ok && disconnectModalShown) {
-      // 连接恢复，刷新页面
+      // Соединение восстановлено — обновить страницу
       disconnectModalShown = false;
       Modal.destroyAll();
       window.location.reload();
@@ -337,18 +337,18 @@ async function checkConnection() {
     if (!disconnectModalShown && !isInitializing.value) {
       disconnectModalShown = true;
       Modal.warning({
-        title: '后端连接断开',
-        content: '无法连接到后端服务，请检查服务是否正在运行。连接恢复后页面将自动刷新。',
-        okText: '我知道了',
+        title: 'Соединение с сервером потеряно',
+        content: 'Не удаётся подключиться к серверу. Проверьте, запущен ли сервис. При восстановлении соединения страница обновится автоматически.',
+        okText: 'Понятно',
         centered: true
       });
     }
   }
 }
 
-// 挂载时检查身份验证
+// Проверка авторизации при монтировании
 onMounted(async () => {
-  // 响应式侧边栏
+  // Адаптивная боковая панель
   const checkScreenSize = () => {
     isMobile.value = window.innerWidth <= 768;
     if (isMobile.value) {
@@ -358,15 +358,15 @@ onMounted(async () => {
   checkScreenSize();
   window.addEventListener('resize', checkScreenSize);
 
-  // 身份验证
+  // Авторизация
   try {
     if (!settingsStore.token) {
       loginVisible.value = true;
     } else {
-      // 使用真实API验证
+      // Проверка через реальный API
       const isValid = await settingsStore.checkAuth();
       if (!isValid) {
-        settingsStore.setToken(''); // 清除无效token
+        settingsStore.setToken(''); // Удалить недействительный токен
         loginVisible.value = true;
       }
     }
@@ -374,14 +374,14 @@ onMounted(async () => {
     console.error('Auth check failed', e);
     loginVisible.value = true;
   } finally {
-    // 隐藏加载状态
+    // Скрыть индикатор загрузки
     isInitializing.value = false;
   }
 
-  // 启动后端连接检测（每 5 秒检测一次）
+  // Запуск периодической проверки соединения (каждые 5 сек)
   connectionCheckInterval = setInterval(checkConnection, 5000);
 
-  // 清理监听器
+  // Удалить слушатели событий
   onUnmounted(() => {
     window.removeEventListener('resize', checkScreenSize);
     if (connectionCheckInterval) {
@@ -392,7 +392,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <a-spin :spinning="isInitializing" tip="正在验证身份..." size="large"
+  <a-spin :spinning="isInitializing" tip="Проверка авторизации..." size="large"
     style="height: 100vh; display: flex; align-items: center; justify-content: center;" v-if="isInitializing" />
   <div v-else>
     <LoginModal v-model:visible="loginVisible" />
@@ -410,13 +410,13 @@ onMounted(async () => {
             <template #icon>
               <ApiOutlined />
             </template>
-            <span v-if="!isMobile">接口测试</span>
+            <span v-if="!isMobile">Тестирование интерфейса</span>
           </a-button>
           <a-button danger :loading="iconLoading" @click="enterIconLoading" :size="isMobile ? 'small' : 'middle'">
             <template #icon>
               <PoweroffOutlined />
             </template>
-            <span v-if="!isMobile">退出登录</span>
+            <span v-if="!isMobile">Выйти из системы</span>
           </a-button>
         </a-flex>
       </a-layout-header>
@@ -429,34 +429,34 @@ onMounted(async () => {
           <a-menu v-model:selectedKeys="selectedKeys" mode="inline" @click="handleMenuClick">
             <a-menu-item key="dash">
               <DashboardOutlined />
-              <span>状态概览</span>
+              <span>Обзор состояния</span>
             </a-menu-item>
             <a-menu-item key="history">
               <RocketOutlined />
-              <span>请求模型</span>
+              <span>Модель запроса</span>
             </a-menu-item>
             <a-sub-menu key="settings">
               <template #title>
                 <span>
                   <SettingOutlined />
-                  <span>系统设置</span>
+                  <span>Настройки</span>
                 </span>
               </template>
-              <a-menu-item key="settings-server">服务器</a-menu-item>
-              <a-menu-item key="settings-workers">工作池</a-menu-item>
-              <a-menu-item key="settings-browser">浏览器</a-menu-item>
-              <a-menu-item key="settings-adapters">适配器</a-menu-item>
+              <a-menu-item key="settings-server">Сервер</a-menu-item>
+              <a-menu-item key="settings-workers">Рабочий пул</a-menu-item>
+              <a-menu-item key="settings-browser">Браузер</a-menu-item>
+              <a-menu-item key="settings-adapters">Адаптеры</a-menu-item>
             </a-sub-menu>
             <a-sub-menu key="tools">
               <template #title>
                 <span>
                   <ToolOutlined />
-                  <span>系统管理</span>
+                  <span>Управление</span>
                 </span>
               </template>
-              <a-menu-item key="tools-display">虚拟显示器</a-menu-item>
-              <a-menu-item key="tools-cache">缓存与重启</a-menu-item>
-              <a-menu-item key="tools-logs">日志查看器</a-menu-item>
+              <a-menu-item key="tools-display">Виртуальный дисплей</a-menu-item>
+              <a-menu-item key="tools-cache">Кэш и перезапуск</a-menu-item>
+              <a-menu-item key="tools-logs">Журнал логов</a-menu-item>
             </a-sub-menu>
           </a-menu>
         </a-layout-sider>
@@ -479,47 +479,47 @@ onMounted(async () => {
       </a-layout>
     </a-layout>
 
-    <!-- 接口测试抽屉 -->
-    <a-drawer v-model:open="apiTestDrawer" title="接口测试" placement="right" :width="isMobile ? '100%' : 500">
+    <!-- Панель тестирования API -->
+    <a-drawer v-model:open="apiTestDrawer" title="Тестирование интерфейса (API)" placement="right" :width="isMobile ? '100%' : 500">
       <a-space direction="vertical" style="width: 100%" size="large">
-        <!-- Models 接口 -->
+        <!-- Эндпоинт Models -->
         <a-card title="GET /v1/models" size="small">
           <template #extra>
             <a-button size="small" type="primary" @click="testApi('models')"
               :loading="apiTestResults.models.status === 'loading'">
-              测试
+              проверка
             </a-button>
           </template>
           <div v-if="apiTestResults.models.status === 'success'">
             <a-tag color="success">
-              <CheckCircleOutlined /> 成功
+              <CheckCircleOutlined /> Успешно
             </a-tag>
             <div style="margin-top: 8px; font-size: 12px; color: #8c8c8c;">
-              返回 {{ apiTestResults.models.data?.data?.length || 0 }} 个模型
+              вернуться {{ apiTestResults.models.data?.data?.length || 0 }} модель
             </div>
           </div>
           <div v-else-if="apiTestResults.models.status === 'error'">
             <a-tag color="error">
-              <CloseCircleOutlined /> 失败
+              <CloseCircleOutlined /> Ошибка
             </a-tag>
             <div style="margin-top: 8px; font-size: 12px; color: #ff4d4f;">
               {{ apiTestResults.models.error }}
             </div>
           </div>
-          <div v-else style="color: #8c8c8c; font-size: 12px;">点击测试按钮开始</div>
+          <div v-else style="color: #8c8c8c; font-size: 12px;">Нажмите кнопку «Тест»</div>
         </a-card>
 
-        <!-- Cookies 接口 -->
+        <!-- Эндпоинт Cookies -->
         <a-card title="GET /v1/cookies" size="small">
           <template #extra>
             <a-button size="small" type="primary" @click="testApi('cookies')"
               :loading="apiTestResults.cookies.status === 'loading'">
-              测试
+              Тест
             </a-button>
           </template>
           <div v-if="apiTestResults.cookies.status === 'success'">
             <a-tag color="success">
-              <CheckCircleOutlined /> 成功
+              <CheckCircleOutlined /> Успешно
             </a-tag>
             <div style="margin-top: 8px; font-size: 12px; color: #8c8c8c;">
               返回 {{ apiTestResults.cookies.data?.cookies?.length || 0 }} 个 Cookie
@@ -527,44 +527,44 @@ onMounted(async () => {
           </div>
           <div v-else-if="apiTestResults.cookies.status === 'error'">
             <a-tag color="error">
-              <CloseCircleOutlined /> 失败
+              <CloseCircleOutlined /> Ошибка
             </a-tag>
             <div style="margin-top: 8px; font-size: 12px; color: #ff4d4f;">
               {{ apiTestResults.cookies.error }}
             </div>
           </div>
-          <div v-else style="color: #8c8c8c; font-size: 12px;">点击测试按钮开始</div>
+          <div v-else style="color: #8c8c8c; font-size: 12px;">Нажмите кнопку «Тест»</div>
         </a-card>
 
-        <!-- Chat 接口 -->
+        <!-- Эндпоинт Chat -->
         <a-card title="POST /v1/chat/completions" size="small">
           <template #extra>
             <a-button size="small" type="primary" @click="testApi('chat')"
               :loading="apiTestResults.chat.status === 'loading'" :disabled="!chatTestModel">
-              测试
+              Тест
             </a-button>
           </template>
 
-          <!-- 模型选择 -->
+          <!-- Выбор модели -->
           <div style="margin-bottom: 12px;">
-            <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 4px;">模型</div>
-            <a-select v-model:value="chatTestModel" style="width: 100%" size="small" placeholder="选择模型" show-search>
+            <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 4px;">Модель</div>
+            <a-select v-model:value="chatTestModel" style="width: 100%" size="small" placeholder="Выберите модель" show-search>
               <a-select-option v-for="model in chatModelList" :key="model.id" :value="model.id">
                 {{ model.id }}
               </a-select-option>
             </a-select>
           </div>
 
-          <!-- 提示词 -->
+          <!-- Промпт -->
           <div style="margin-bottom: 12px;">
-            <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 4px;">提示词</div>
-            <a-textarea v-model:value="chatTestPrompt" placeholder="输入提示词" :rows="2" size="small" />
+            <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 4px;">Промпт</div>
+            <a-textarea v-model:value="chatTestPrompt" placeholder="Введите промпт" :rows="2" size="small" />
           </div>
 
-          <!-- 图片上传 -->
+          <!-- Загрузка изображений -->
           <div style="margin-bottom: 12px;">
             <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 4px;">
-              附加图片 ({{ chatImageList.length }}/10)
+              Изображения ({{ chatImageList.length }}/10)
             </div>
             <a-upload-dragger :file-list="[]" :multiple="true" :before-upload="beforeUpload" @change="handleImageChange"
               accept=".png,.jpg,.jpeg,.gif,.webp" :show-upload-list="false" style="padding: 8px;">
@@ -572,7 +572,7 @@ onMounted(async () => {
                 <InboxOutlined style="font-size: 24px; color: #1890ff;" />
               </p>
               <p style="font-size: 12px; margin: 4px 0 0 0; color: #8c8c8c;">
-                点击或拖拽上传图片 (PNG/JPEG/GIF/WebP)
+                Нажмите или перетащите изображение (PNG/JPEG/GIF/WebP)
               </p>
             </a-upload-dragger>
             <div v-if="chatImageList.length > 0" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
@@ -583,34 +583,34 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- 流式选项 -->
+          <!-- Потоковый режим -->
           <div style="margin-bottom: 12px;">
-            <a-checkbox v-model:checked="chatStreamMode">流式响应</a-checkbox>
+            <a-checkbox v-model:checked="chatStreamMode">Потоковый ответ</a-checkbox>
           </div>
 
-          <!-- 测试结果 -->
-          <!-- 加载中或成功：统一显示内容 -->
+          <!-- Результаты теста -->
+          <!-- Загрузка или успех -->
           <div v-if="apiTestResults.chat.status === 'loading' || apiTestResults.chat.status === 'success'">
-            <!-- 状态标签 -->
+            <!-- Статус -->
             <div style="margin-bottom: 8px;">
               <a-tag v-if="apiTestResults.chat.status === 'loading'" color="processing">
-                <LoadingOutlined /> {{ chatStreamMode ? '正在接收流式响应...' : '请求中，可能需要较长时间...' }}
+                <LoadingOutlined /> {{ chatStreamMode ? 'Приём потокового ответа...' : 'Запрос, может занять время...' }}
               </a-tag>
               <a-tag v-else color="success">
-                <CheckCircleOutlined /> 成功
+                <CheckCircleOutlined /> Успешно
               </a-tag>
             </div>
 
             <!-- 内容显示容器（流式用 chatStreamContent，成功后用 data.content） -->
             <div v-if="chatStreamMode ? chatStreamContent : apiTestResults.chat.data?.content"
               style="font-size: 12px; max-height: 400px; overflow-y: auto; background: #fafafa; padding: 8px; border-radius: 4px;">
-              <!-- 文本内容 -->
+              <!-- Текст -->
               <pre
                 v-if="parseMarkdownImages(chatStreamMode ? chatStreamContent : apiTestResults.chat.data?.content).text"
                 style="white-space: pre-wrap; word-break: break-all; margin: 0 0 8px 0;">{{
                   parseMarkdownImages(chatStreamMode ? chatStreamContent : apiTestResults.chat.data?.content).text }}</pre>
 
-              <!-- 图片展示 -->
+              <!-- Изображения -->
               <div
                 v-if="parseMarkdownImages(chatStreamMode ? chatStreamContent : apiTestResults.chat.data?.content).images.length > 0"
                 style="display: flex; flex-direction: column; gap: 8px;">
@@ -623,7 +623,7 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <!-- 视频展示 -->
+              <!-- Видео -->
               <div
                 v-if="parseMarkdownImages(chatStreamMode ? chatStreamContent : apiTestResults.chat.data?.content).videos.length > 0"
                 style="display: flex; flex-direction: column; gap: 8px;">
@@ -631,20 +631,20 @@ onMounted(async () => {
                   v-for="(video, index) in parseMarkdownImages(chatStreamMode ? chatStreamContent : apiTestResults.chat.data?.content).videos"
                   :key="'video-' + index"
                   style="border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px; background: white;">
-                  <div style="font-size: 11px; color: #8c8c8c; margin-bottom: 4px;">生成的视频</div>
+                  <div style="font-size: 11px; color: #8c8c8c; margin-bottom: 4px;">Сгенерированное видео</div>
                   <video :src="video.src" controls
                     style="max-width: 100%; height: auto; display: block; border-radius: 2px;">
-                    您的浏览器不支持视频播放。
+                    Ваш браузер не поддерживает воспроизведение видео.
                   </video>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 错误状态 -->
+          <!-- Ошибка -->
           <div v-else-if="apiTestResults.chat.status === 'error'">
             <a-tag color="error">
-              <CloseCircleOutlined /> 失败
+              <CloseCircleOutlined /> Ошибка
             </a-tag>
             <div style="margin-top: 8px; font-size: 12px; color: #ff4d4f;">
               {{ apiTestResults.chat.error }}
@@ -657,7 +657,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* 滚动条美化 */
+/* Стилизация полосы прокрутки */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

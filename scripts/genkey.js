@@ -8,7 +8,7 @@
 import crypto from 'crypto';
 
 /**
- * 生成随机 API Key（用于 `config.yaml` 的 `server.auth`）
+ * Генерация случайного API-ключа（用于 `config.yaml` 的 `server.auth`）
  * 格式：sk-{48位十六进制字符}
  * @returns {string} API Key
  */

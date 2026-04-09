@@ -24,12 +24,12 @@ const refreshInterval = ref(null);
 const searchText = ref('');
 const levelFilter = ref('all');
 
-// 统计查询相关
+// Статистика
 const dateRange = ref([]);
 const rangeStats = ref({ success: 0, failed: 0, days: 0 });
 const statsLoading = ref(false);
 
-// 日志级别配置
+// Конфигурация уровней логов
 const levelConfig = {
     'INFO': { color: '#1890ff', icon: InfoCircleOutlined },
     'WARN': { color: '#faad14', icon: WarningOutlined },
@@ -37,7 +37,7 @@ const levelConfig = {
     'DBUG': { color: '#722ed1', icon: BugOutlined }
 };
 
-// 获取日志
+// Получить логи
 const fetchLogs = async () => {
     loading.value = true;
     try {
@@ -50,16 +50,16 @@ const fetchLogs = async () => {
             total.value = data.total || 0;
         }
     } catch (e) {
-        message.error('获取日志失败');
+        message.error('Ошибка получения логов');
     } finally {
         loading.value = false;
     }
 };
 
-// 解析日志行
+// Разбор строки лога
 const parseLogs = (lines) => {
     return lines.map((line, index) => {
-        // 格式: 2025-12-20 17:00:00.000 [INFO] [模块] 消息
+        // Формат: 2025-12-20 17:00:00.000 [INFO] [Модуль] Сообщение
         const match = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(\w+)\] \[([^\]]+)\] (.*)$/);
         if (match) {
             return {
@@ -75,32 +75,32 @@ const parseLogs = (lines) => {
     });
 };
 
-// 过滤后的日志（最新的在最上面）
+// Отфильтрованные логи (новые сверху)
 const filteredLogs = computed(() => {
     const filtered = logs.value.filter(log => {
-        // 级别过滤
+        // Фильтр по уровню
         if (levelFilter.value !== 'all' && log.level !== levelFilter.value) {
             return false;
         }
-        // 搜索过滤
+        // Поиск
         if (searchText.value) {
             const search = searchText.value.toLowerCase();
             return log.raw.toLowerCase().includes(search);
         }
         return true;
     });
-    // 反转数组，最新的日志显示在最上面
+    // Обратный порядок — новые логи сверху
     return filtered.reverse();
 });
 
-// 清除日志
+// Очистить журнал
 const clearLogs = () => {
     Modal.confirm({
-        title: '确认清除日志',
-        content: '此操作将删除所有系统日志文件，是否继续？',
-        okText: '确认清除',
+        title: 'Подтверждение очистки логов',
+        content: 'Будут удалены все файлы системного журнала. Продолжить?',
+        okText: 'Очистить',
         okType: 'danger',
-        cancelText: '取消',
+        cancelText: 'Отмена',
         async onOk() {
             try {
                 const res = await fetch('/admin/logs', {
@@ -108,20 +108,20 @@ const clearLogs = () => {
                     headers: settingsStore.getHeaders()
                 });
                 if (res.ok) {
-                    message.success('日志已清除');
+                    message.success('Журнал очищен');
                     logs.value = [];
                     total.value = 0;
                 } else {
-                    message.error('清除失败');
+                    message.error('Ошибка очистки');
                 }
             } catch (e) {
-                message.error('请求失败');
+                message.error('Ошибка запроса');
             }
         }
     });
 };
 
-// 导出日志
+// Экспорт журнала
 const exportLogs = () => {
     const content = logs.value.map(l => l.raw).join('\n');
     const blob = new Blob([content], { type: 'text/plain' });
@@ -133,11 +133,11 @@ const exportLogs = () => {
     URL.revokeObjectURL(url);
 };
 
-// 切换自动刷新
+// Переключить авто-обновление
 const toggleAutoRefresh = (newState) => {
     autoRefresh.value = newState;
     if (newState) {
-        fetchLogs(); // 立即刷新一次
+        fetchLogs(); // Немедленно обновить
         refreshInterval.value = setInterval(fetchLogs, 5000);
     } else {
         if (refreshInterval.value) {
@@ -147,7 +147,7 @@ const toggleAutoRefresh = (newState) => {
     }
 };
 
-// 查询日期范围统计
+// Запрос статистики за период
 const fetchRangeStats = async () => {
     if (!dateRange.value || dateRange.value.length !== 2) {
         rangeStats.value = { success: 0, failed: 0, days: 0 };
@@ -165,25 +165,25 @@ const fetchRangeStats = async () => {
             rangeStats.value = await res.json();
         }
     } catch (e) {
-        message.error('获取统计失败');
+        message.error('Ошибка получения статистики');
     } finally {
         statsLoading.value = false;
     }
 };
 
-// 删除选定范围的统计数据
+// Удалить статистику за период
 const clearRangeStats = () => {
     if (!dateRange.value || dateRange.value.length !== 2) {
-        message.warning('请先选择日期范围');
+        message.warning('Сначала выберите диапазон дат');
         return;
     }
 
     Modal.confirm({
-        title: '确认删除',
-        content: `确定要删除 ${dateRange.value[0].format('YYYY-MM-DD')} 至 ${dateRange.value[1].format('YYYY-MM-DD')} 的统计数据吗？`,
-        okText: '删除',
+        title: 'Подтверждение удаления',
+        content: `Удалить статистику с ${dateRange.value[0].format('YYYY-MM-DD')} по ${dateRange.value[1].format('YYYY-MM-DD')}?`,
+        okText: 'Удалить',
         okType: 'danger',
-        cancelText: '取消',
+        cancelText: 'Отмена',
         async onOk() {
             try {
                 const [start, end] = dateRange.value;
@@ -192,11 +192,11 @@ const clearRangeStats = () => {
                     { method: 'DELETE', headers: settingsStore.getHeaders() }
                 );
                 if (res.ok) {
-                    message.success('统计数据已删除');
+                    message.success('Статистика удалена');
                     rangeStats.value = { success: 0, failed: 0, days: 0 };
                 }
             } catch (e) {
-                message.error('删除失败');
+                message.error('Ошибка удаления');
             }
         }
     });
@@ -214,20 +214,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <!-- 统计查询面板 -->
-    <a-card title="请求统计" :bordered="false">
+    <!-- Панель статистики -->
+    <a-card title="Статистика запросов" :bordered="false">
         <template #extra>
             <a-button type="link" danger size="small" @click="clearRangeStats"
                 :disabled="!dateRange || dateRange.length !== 2">
                 <template #icon>
                     <DeleteOutlined />
                 </template>
-                删除统计
+                Удалить
             </a-button>
         </template>
 
         <div class="stats-content">
-            <a-range-picker v-model:value="dateRange" :format="'YYYY-MM-DD'" :placeholder="['开始日期', '结束日期']"
+            <a-range-picker v-model:value="dateRange" :format="'YYYY-MM-DD'" :placeholder="['Начало', 'Конец']"
                 size="small" class="stats-date-picker" @change="fetchRangeStats" />
 
             <a-divider type="vertical" style="height: 32px; margin: 0 16px" />
@@ -237,37 +237,37 @@ onUnmounted(() => {
                     <div class="stat-item success">
                         <CheckCircleOutlined />
                         <span class="stat-value">{{ rangeStats.success }}</span>
-                        <span class="stat-label">成功</span>
+                        <span class="stat-label">Успешно</span>
                     </div>
                     <div class="stat-item error">
                         <CloseCircleOutlined />
                         <span class="stat-value">{{ rangeStats.failed }}</span>
-                        <span class="stat-label">失败</span>
+                        <span class="stat-label">Ошибок</span>
                     </div>
                     <div class="stat-item neutral">
                         <span class="stat-value">{{ rangeStats.days }}</span>
-                        <span class="stat-label">天</span>
+                        <span class="stat-label">дн.</span>
                     </div>
                 </div>
             </a-spin>
         </div>
     </a-card>
 
-    <!-- 系统日志 -->
-    <a-card title="系统日志" :bordered="false" style="margin-top: 24px">
-        <!-- 工具栏 -->
+    <!-- Системный журнал -->
+    <a-card title="Системный журнал" :bordered="false" style="margin-top: 24px">
+        <!-- Панель инструментов -->
         <div class="toolbar">
-            <!-- 第一行：级别筛选和操作按钮 -->
+            <!-- Строка 1: фильтр и кнопки -->
             <div class="toolbar-row">
                 <a-select v-model:value="levelFilter" style="width: 90px" size="small">
-                    <a-select-option value="all">全部</a-select-option>
+                    <a-select-option value="all">Все</a-select-option>
                     <a-select-option value="INFO">INFO</a-select-option>
                     <a-select-option value="WARN">WARN</a-select-option>
                     <a-select-option value="ERRO">ERROR</a-select-option>
                     <a-select-option value="DBUG">DEBUG</a-select-option>
                 </a-select>
                 <a-space :size="4">
-                    <a-tooltip :title="autoRefresh ? '关闭自动刷新' : '开启自动刷新'">
+                    <a-tooltip :title="autoRefresh ? 'Отключить авто-обновление' : 'Включить авто-обновление'">
                         <a-button size="small" :type="autoRefresh ? 'primary' : 'default'"
                             @click="toggleAutoRefresh(!autoRefresh)">
                             <template #icon>
@@ -275,14 +275,14 @@ onUnmounted(() => {
                             </template>
                         </a-button>
                     </a-tooltip>
-                    <a-tooltip title="导出日志">
+                    <a-tooltip title="Экспорт">
                         <a-button size="small" @click="exportLogs">
                             <template #icon>
                                 <DownloadOutlined />
                             </template>
                         </a-button>
                     </a-tooltip>
-                    <a-tooltip title="清除日志">
+                    <a-tooltip title="Очистить">
                         <a-button size="small" danger @click="clearLogs">
                             <template #icon>
                                 <DeleteOutlined />
@@ -291,22 +291,22 @@ onUnmounted(() => {
                     </a-tooltip>
                 </a-space>
             </div>
-            <!-- 第二行：搜索框 -->
+            <!-- Строка 2: поиск -->
             <div class="toolbar-row">
-                <a-input-search v-model:value="searchText" placeholder="搜索日志" size="small" enter-button allow-clear
+                <a-input-search v-model:value="searchText" placeholder="Поиск в журнале" size="small" enter-button allow-clear
                     style="width: 100%;" />
             </div>
         </div>
 
-        <!-- 统计信息 -->
+        <!-- Статистика -->
         <div style="margin-bottom: 12px; color: #8c8c8c; font-size: 12px;">
-            共 {{ total }} 条日志，当前显示 {{ filteredLogs.length }} 条
+            Всего {{ total }} записей, показано {{ filteredLogs.length }}
             <span v-if="autoRefresh" style="color: #1890ff; margin-left: 8px;">
-                <ReloadOutlined :spin="true" /> 自动刷新中
+                <ReloadOutlined :spin="true" /> Авто-обновление
             </span>
         </div>
 
-        <!-- 日志列表 -->
+        <!-- Список логов -->
         <div class="log-container">
             <div v-for="log in filteredLogs" :key="log.id" class="log-line" :class="'level-' + log.level.toLowerCase()">
                 <div class="log-meta">
@@ -318,7 +318,7 @@ onUnmounted(() => {
                 </div>
                 <span class="log-message">{{ log.message }}</span>
             </div>
-            <a-empty v-if="filteredLogs.length === 0" description="暂无日志" />
+            <a-empty v-if="filteredLogs.length === 0" description="Журнал пуст" />
         </div>
     </a-card>
 </template>
@@ -386,7 +386,7 @@ onUnmounted(() => {
     color: #722ed1;
 }
 
-/* 工具栏样式 */
+/* Стили панели инструментов */
 .toolbar {
     margin-bottom: 16px;
 }
@@ -403,7 +403,7 @@ onUnmounted(() => {
     margin-bottom: 0;
 }
 
-/* 大屏幕：工具栏一行显示 */
+/* Широкий экран: панель в одну строку */
 @media (min-width: 768px) {
     .toolbar {
         display: flex;
@@ -422,7 +422,7 @@ onUnmounted(() => {
     }
 }
 
-/* 统计内容样式 */
+/* Стили статистики */
 
 .stats-content {
     display: flex;

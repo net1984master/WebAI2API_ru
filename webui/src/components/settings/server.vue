@@ -5,7 +5,7 @@ import { Modal, message } from 'ant-design-vue';
 
 const settingsStore = useSettingsStore();
 
-// 表单数据
+// Данные формы
 const formData = reactive({
     port: 5173,
     authToken: '',
@@ -20,138 +20,138 @@ onMounted(async () => {
     Object.assign(formData, settingsStore.serverConfig);
 });
 
-// 实际保存逻辑
+// Логика сохранения
 const doSave = async () => {
     await settingsStore.saveServerConfig(formData);
 };
 
-// 保存设置 (带校验和确认弹窗)
+// Сохранить (с валидацией и подтверждением)
 const handleSave = async () => {
-    // 前端校验：Token 长度在 1-9 之间时提示
+    // Валидация: предупреждение при длине токена 1-9
     if (formData.authToken && formData.authToken.length > 0 && formData.authToken.length < 10) {
-        message.error('鉴权 Token 如果设置则必须至少 10 个字符，或留空');
+        message.error('Если токен задан, он должен содержать не менее 10 символов, или оставьте пустым');
         return;
     }
 
-    // Token 留空时弹出确认框
+    // Диалог подтверждения при пустом токене
     if (!formData.authToken) {
         Modal.confirm({
-            title: '安全警告',
-            content: '您正在将鉴权 Token 留空，这意味着 API 和 WebUI 将无需认证即可访问。请勿在公网环境中使用此配置！确定要继续吗？',
-            okText: '确定留空',
+            title: 'Предупреждение безопасности',
+            content: 'Вы оставляете токен пустым: API и WebUI будут доступны без авторизации. Не используйте это в публичной сети!',
+            okText: 'Оставить пустым',
             okType: 'danger',
-            cancelText: '取消',
+            cancelText: 'Отмена',
             onOk: doSave
         });
         return;
     }
 
-    // 正常保存
+    // Обычное сохранение
     await doSave();
 };
 </script>
 
 <template>
     <a-layout style="background: transparent;">
-        <a-card title="服务器设置" :bordered="false" style="width: 100%;">
-            <!-- 4宫格表单布局 -->
+        <a-card title="Настройки сервера" :bordered="false" style="width: 100%;">
+            <!-- Сетка формы -->
             <a-row :gutter="[16, 16]">
-                <!-- 监听端口 -->
+                <!-- Порт прослушивания -->
                 <a-col :xs="24" :md="12">
                     <div style="margin-bottom: 8px;">
-                        <div style="font-weight: 600; margin-bottom: 4px;">监听端口</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Порт прослушивания</div>
                         <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                            设置服务器监听的端口号，默认为 5173
+                            Порт сервера, по умолчанию 5173
                         </div>
-                        <a-input-number v-model:value="formData.port" :min="1" :max="65535" placeholder="请输入端口号"
+                        <a-input-number v-model:value="formData.port" :min="1" :max="65535" placeholder="Введите номер порта"
                             style="width: 100%" />
                     </div>
                 </a-col>
 
-                <!-- 鉴权 Token -->
+                <!-- API Token -->
                 <a-col :xs="24" :md="12">
                     <div style="margin-bottom: 8px;">
-                        <div style="font-weight: 600; margin-bottom: 4px;">鉴权 Token</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">API Token</div>
                         <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                            用于 API 请求鉴权的密钥，留空则不启用鉴权
+                            Ключ авторизации для API, оставьте пустым для отключения
                         </div>
-                        <a-input-password v-model:value="formData.authToken" placeholder="请输入 Token" type="password" />
+                        <a-input-password v-model:value="formData.authToken" placeholder="Введите Token" type="password" />
                     </div>
                 </a-col>
 
-                <!-- 心跳包类型 (Keepalive Mode) -->
+                <!-- Режим heartbeat -->
                 <a-col :xs="24" :md="12">
                     <div style="margin-bottom: 8px;">
-                        <div style="font-weight: 600; margin-bottom: 4px;">心跳包类型</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Режим heartbeat</div>
                         <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                            选择 SSE 流式响应的心跳包格式
+                            Формат heartbeat-пакетов для SSE
                         </div>
-                        <a-select v-model:value="formData.keepaliveMode" style="width: 100%" placeholder="请选择心跳包类型">
-                            <a-select-option value="comment">Comment - 注释格式</a-select-option>
-                            <a-select-option value="content">Content - 内容格式</a-select-option>
+                        <a-select v-model:value="formData.keepaliveMode" style="width: 100%" placeholder="Выберите режим heartbeat">
+                            <a-select-option value="comment">Comment — формат комментария</a-select-option>
+                            <a-select-option value="content">Content — формат данных</a-select-option>
                         </a-select>
                     </div>
                 </a-col>
 
-                <!-- 日志等级 -->
+                <!-- Уровень логов -->
                 <a-col :xs="24" :md="12">
                     <div style="margin-bottom: 8px;">
-                        <div style="font-weight: 600; margin-bottom: 4px;">日志等级</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Уровень логов</div>
                         <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                            设置服务器日志输出的详细程度
+                            Детализация журнала сервера
                         </div>
-                        <a-select v-model:value="formData.logLevel" style="width: 100%" placeholder="请选择日志等级">
-                            <a-select-option value="debug">Debug - 调试日志</a-select-option>
-                            <a-select-option value="info">Info - 普通信息</a-select-option>
-                            <a-select-option value="warn">Warn - 警告信息</a-select-option>
-                            <a-select-option value="error">Error - 仅错误</a-select-option>
+                        <a-select v-model:value="formData.logLevel" style="width: 100%" placeholder="Выберите уровень">
+                            <a-select-option value="debug">Debug — отладка</a-select-option>
+                            <a-select-option value="info">Info — информация</a-select-option>
+                            <a-select-option value="warn">Warn — предупреждения</a-select-option>
+                            <a-select-option value="error">Error — только ошибки</a-select-option>
                         </a-select>
                     </div>
                 </a-col>
             </a-row>
 
-            <!-- 保存按钮（右下角） -->
+            <!-- Кнопка сохранения -->
             <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
                 <a-button type="primary" @click="handleSave">
-                    保存设置
+                    Сохранить
                 </a-button>
             </div>
         </a-card>
 
-        <!-- 队列设置 -->
-        <a-card title="队列设置" :bordered="false" style="width: 100%; margin-top: 10px;">
+        <!-- Настройки очереди -->
+        <a-card title="Настройки очереди" :bordered="false" style="width: 100%; margin-top: 10px;">
             <a-row :gutter="[16, 16]">
-                <!-- 队列缓冲区大小 -->
+                <!-- Буфер очереди -->
                 <a-col :xs="24" :md="12">
                     <div style="margin-bottom: 8px;">
-                        <div style="font-weight: 600; margin-bottom: 4px;">队列缓冲区大小</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Буфер очереди</div>
                         <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                            非流式请求的额外排队数（设为 0 则不限制非流式请求数量）<br>
-                            实际队列上限 = Workers数量 + 缓冲区大小
+                            Дополнительных мест для не-потоковых запросов (0 = без ограничений)<br>
+                            Лимит очереди = кол-во воркеров + буфер
                         </div>
-                        <a-input-number v-model:value="formData.queueBuffer" :min="0" :max="100" placeholder="默认为 2"
+                        <a-input-number v-model:value="formData.queueBuffer" :min="0" :max="100" placeholder="По умолчанию 2"
                             style="width: 100%" />
                     </div>
                 </a-col>
 
-                <!-- 图片数量上限 -->
+                <!-- Лимит изображений -->
                 <a-col :xs="24" :md="12">
                     <div style="margin-bottom: 8px;">
-                        <div style="font-weight: 600; margin-bottom: 4px;">图片数量上限</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Лимит изображений</div>
                         <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                            单次请求最多支持的图片附件数量<br>
-                            网页最多支持10个附件，超出会被丢弃
+                            Максимум изображений в одном запросе<br>
+                            Сайт поддерживает до 10 вложений, лишние будут отброшены
                         </div>
-                        <a-input-number v-model:value="formData.imageLimit" :min="1" :max="10" placeholder="默认为 5"
+                        <a-input-number v-model:value="formData.imageLimit" :min="1" :max="10" placeholder="По умолчанию 5"
                             style="width: 100%" />
                     </div>
                 </a-col>
             </a-row>
 
-            <!-- 保存按钮（右下角） -->
+            <!-- Кнопка сохранения -->
             <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
                 <a-button type="primary" @click="handleSave">
-                    保存设置
+                    Сохранить
                 </a-button>
             </div>
         </a-card>
@@ -159,7 +159,7 @@ const handleSave = async () => {
 </template>
 
 <style scoped>
-/* 确保在手机端也能正常显示 */
+/* Корректное отображение на мобильных */
 .ant-input-number {
     width: 100%;
 }

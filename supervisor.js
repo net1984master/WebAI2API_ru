@@ -1,12 +1,12 @@
 /**
- * @fileoverview Supervisor 进程管理器
- * @description 负责管理 Xvfb 环境和子服务的生命周期
+ * @fileoverview Supervisor — менеджер процессов
+ * @description Отвечает за управление жизненным циклом Xvfb и дочерних сервисов
  *
- * 功能：
- * - Linux 环境下启动 xvfb-run
- * - 使用 child_process.spawn 启动 server.js
- * - 监听 IPC 通道接收重启指令
- * - 子进程崩溃时自动重启
+ * Функции:
+ * - Запуск xvfb-run в среде Linux
+ * - Запуск server.js через child_process.spawn
+ * - Прослушивание IPC-канала для получения команд перезапуска
+ * - Автоматический перезапуск при падении дочернего процесса
  */
 
 import { spawn, spawnSync } from 'child_process';
@@ -15,27 +15,27 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 
-// ==================== 配置 ====================
+// ==================== Настройки ====================
 
 const isWindows = os.platform() === 'win32';
 
-// IPC 通道路径
+// Путь к IPC-каналу
 const IPC_PATH = isWindows
     ? '\\\\.\\pipe\\webai2api-supervisor'
     : path.join(os.tmpdir(), 'webai2api-supervisor.sock');
 
-// 重启延迟（毫秒）
+// Задержка перезапуска (мс)
 const RESTART_DELAY = 1000;
 
-// 下次重启使用的参数（由 IPC 设置）
+// Аргументы для следующего перезапуска (задаются через IPC)
 let restartArgs = null;
 
-// ==================== 工具函数 ====================
+// ==================== Утилиты ====================
 
 /**
- * 简单日志
- * @param {string} level 
- * @param {string} message 
+ * Простое логирование
+ * @param {string} level
+ * @param {string} message
  */
 function log(level, message) {
     const now = new Date();
@@ -43,12 +43,12 @@ function log(level, message) {
     const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
     const levelTag = level === 'ERROR' ? 'ERRO' : level;
-    console.log(`${date} ${time} [${levelTag}] [看门狗] ${message}`);
+    console.log(`${date} ${time} [${levelTag}] [Сторож] ${message}`);
 }
 
 /**
- * 检查命令是否存在（Linux）
- * @param {string} cmd 
+ * Проверить наличие команды (Linux)
+ * @param {string} cmd
  * @returns {boolean}
  */
 function checkCommand(cmd) {
@@ -58,8 +58,8 @@ function checkCommand(cmd) {
 }
 
 /**
- * 检查端口是否可用
- * @param {number} port 
+ * Проверить доступность порта
+ * @param {number} port
  * @returns {Promise<boolean>}
  */
 function isPortAvailable(port) {
@@ -75,9 +75,9 @@ function isPortAvailable(port) {
 }
 
 /**
- * 查找可用端口
- * @param {number} startPort - 起始端口
- * @param {number} maxTries - 最大尝试次数
+ * Найти свободный порт
+ * @param {number} startPort - начальный порт
+ * @param {number} maxTries - максимальное число попыток
  * @returns {Promise<number|null>}
  */
 async function findAvailablePort(startPort, maxTries = 10) {
@@ -91,8 +91,8 @@ async function findAvailablePort(startPort, maxTries = 10) {
 }
 
 /**
- * 检查 Xvfb 显示号是否可用
- * @param {number} displayNum 
+ * Проверить доступность номера дисплея Xvfb
+ * @param {number} displayNum
  * @returns {boolean}
  */
 function isDisplayAvailable(displayNum) {
@@ -102,9 +102,9 @@ function isDisplayAvailable(displayNum) {
 }
 
 /**
- * 查找可用的显示号
- * @param {number} startNum - 起始显示号
- * @param {number} maxTries - 最大尝试次数
+ * Найти доступный номер дисплея
+ * @param {number} startNum - начальный номер
+ * @param {number} maxTries - максимальное число попыток
  * @returns {number}
  */
 function findAvailableDisplay(startNum = 50, maxTries = 50) {
@@ -114,16 +114,16 @@ function findAvailableDisplay(startNum = 50, maxTries = 50) {
             return num;
         }
     }
-    // 回退：使用随机显示号
+    // Запасной вариант: случайный номер дисплея
     return 50 + Math.floor(Math.random() * 50);
 }
 
-// ==================== IPC 服务器 ====================
+// ==================== IPC-сервер ====================
 
 let serverProcess = null;
 let isRestarting = false;
 
-// VNC 状态追踪
+// Состояние VNC
 let vncInfo = {
     enabled: false,
     port: 5900,
@@ -132,10 +132,10 @@ let vncInfo = {
 };
 
 /**
- * 启动 IPC 服务器
+ * Запустить IPC-сервер
  */
 function startIpcServer() {
-    // 清理旧的 socket 文件（Linux）
+    // Удалить старый socket-файл (Linux)
     if (!isWindows && fs.existsSync(IPC_PATH)) {
         try {
             fs.unlinkSync(IPC_PATH);
@@ -147,19 +147,19 @@ function startIpcServer() {
             const command = data.toString().trim();
 
             if (command === 'RESTART' || command.startsWith('RESTART:')) {
-                // 支持 RESTART:参数 格式
+                // Поддержка формата RESTART:аргументы
                 const extraArgs = command.includes(':') ? command.split(':')[1].split(' ').filter(Boolean) : [];
-                log('INFO', `收到 IPC 指令: RESTART${extraArgs.length ? ' (参数: ' + extraArgs.join(' ') + ')' : ''}`);
+                log('INFO', `Получена IPC-команда: RESTART${extraArgs.length ? ' (аргументы: ' + extraArgs.join(' ') + ')' : ''}`);
                 socket.write('OK\n');
                 socket.end();
                 restartServer(extraArgs);
             } else if (command === 'STOP') {
-                log('INFO', '收到 IPC 指令: STOP');
+                log('INFO', 'Получена IPC-команда: STOP');
                 socket.write('OK\n');
                 socket.end();
                 stopAll();
             } else if (command === 'GET_VNC_INFO') {
-                // 返回 VNC 状态信息并关闭连接
+                // Вернуть информацию о состоянии VNC и закрыть соединение
                 socket.write(JSON.stringify(vncInfo) + '\n');
                 socket.end();
             } else {
@@ -170,33 +170,33 @@ function startIpcServer() {
     });
 
     ipcServer.listen(IPC_PATH, () => {
-        log('INFO', `IPC 服务器已启动: ${IPC_PATH}`);
+        log('INFO', `IPC-сервер запущен: ${IPC_PATH}`);
     });
 
     ipcServer.on('error', (err) => {
-        log('ERROR', `IPC 服务器错误: ${err.message}`);
+        log('ERROR', `Ошибка IPC-сервера: ${err.message}`);
     });
 
     return ipcServer;
 }
 
-// ==================== 子进程管理 ====================
+// ==================== Управление дочерними процессами ====================
 
-// 不可恢复的退出码（不应自动重启）
+// Коды завершения, после которых не следует перезапускать
 const FATAL_EXIT_CODES = [
-    78,  // 配置/依赖错误
+    78,  // Ошибка конфигурации/зависимостей
 ];
 
 /**
- * 启动 server.js 子进程
- * @param {string[]} [extraArgs] - 额外的命令行参数
+ * Запустить дочерний процесс server.js
+ * @param {string[]} [extraArgs] - дополнительные аргументы командной строки
  */
 function startServer(extraArgs = []) {
     const serverPath = path.join(process.cwd(), 'src', 'server', 'server.js');
 
-    // 检查 server.js 是否存在
+    // Проверить наличие server.js
     if (!fs.existsSync(serverPath)) {
-        log('ERROR', `未找到 server.js: ${serverPath}`);
+        log('ERROR', `Файл server.js не найден: ${serverPath}`);
         process.exit(1);
     }
 
@@ -206,56 +206,56 @@ function startServer(extraArgs = []) {
         SUPERVISOR_IPC: IPC_PATH
     };
 
-    log('INFO', '正在启动子服务 (src/server/server.js)...');
+    log('INFO', 'Запуск дочернего сервиса (src/server/server.js)...');
 
     serverProcess = spawn(process.execPath, args, {
         cwd: process.cwd(),
         env,
-        stdio: 'inherit'  // 将子进程 stdio 直接输出到主控制台
+        stdio: 'inherit'  // Перенаправить stdio дочернего процесса в основную консоль
     });
 
     serverProcess.on('exit', (code, signal) => {
         if (isRestarting) {
-            log('INFO', '子服务已停止，准备重启...');
+            log('INFO', 'Дочерний сервис остановлен, подготовка к перезапуску...');
             isRestarting = false;
-            // 如果有新参数，使用新参数；否则使用原参数
+            // Использовать новые аргументы, если они заданы, иначе исходные
             const argsToUse = restartArgs !== null ? restartArgs : extraArgs;
-            restartArgs = null; // 重置
+            restartArgs = null; // Сброс
             setTimeout(() => startServer(argsToUse), RESTART_DELAY);
         } else if (code !== 0 && code !== null) {
-            // 检查是否为不可恢复的错误
+            // Проверить, является ли ошибка неустранимой
             if (FATAL_EXIT_CODES.includes(code)) {
-                log('ERROR', `子服务因配置/依赖错误退出 (code: ${code})，不会自动重启`);
+                log('ERROR', `Дочерний сервис завершился из-за ошибки конфигурации/зависимостей (код: ${code}), автоперезапуск отключён`);
                 process.exit(code);
             }
-            log('WARN', `子服务异常退出 (code: ${code})，将自动重启...`);
+            log('WARN', `Дочерний сервис завершился аварийно (код: ${code}), автоматический перезапуск...`);
             setTimeout(() => startServer(extraArgs), RESTART_DELAY);
         } else {
-            log('INFO', '子服务已正常退出');
+            log('INFO', 'Дочерний сервис завершился штатно');
             process.exit(0);
         }
     });
 
     serverProcess.on('error', (err) => {
-        log('ERROR', `子服务启动失败: ${err.message}`);
+        log('ERROR', `Не удалось запустить дочерний сервис: ${err.message}`);
         process.exit(1);
     });
 }
 
 /**
- * 重启子服务
- * @param {string[]} [newArgs] - 新的启动参数（将覆盖原有参数）
+ * Перезапустить дочерний сервис
+ * @param {string[]} [newArgs] - новые аргументы запуска (заменяют прежние)
  */
 function restartServer(newArgs = null) {
     if (isRestarting) {
-        log('WARN', '重启已在进行中，忽略重复请求');
+        log('WARN', 'Перезапуск уже выполняется, повторный запрос проигнорирован');
         return;
     }
 
     isRestarting = true;
-    log('INFO', '正在重启子服务...');
+    log('INFO', 'Перезапуск дочернего сервиса...');
 
-    // 如果提供了新参数，更新启动参数
+    // Если переданы новые аргументы, обновить параметры запуска
     if (newArgs !== null) {
         restartArgs = newArgs;
     }
@@ -266,10 +266,10 @@ function restartServer(newArgs = null) {
 }
 
 /**
- * 停止所有服务
+ * Остановить все сервисы
  */
 function stopAll() {
-    log('INFO', '正在停止所有服务...');
+    log('INFO', 'Остановка всех сервисов...');
 
     if (serverProcess) {
         serverProcess.kill('SIGTERM');
@@ -278,26 +278,26 @@ function stopAll() {
     setTimeout(() => process.exit(0), 500);
 }
 
-// ==================== Xvfb 处理（Linux） ====================
+// ==================== Обработка Xvfb (Linux) ====================
 
 /**
- * 在 Xvfb 中启动
- * @param {string[]} originalArgs - 原始命令行参数
+ * Запустить в Xvfb
+ * @param {string[]} originalArgs - исходные аргументы командной строки
  */
 function startInXvfb(originalArgs) {
     if (!checkCommand('xvfb-run')) {
-        log('ERROR', '未找到 xvfb-run 命令');
-        log('ERROR', '请先安装 Xvfb:');
+        log('ERROR', 'Команда xvfb-run не найдена');
+        log('ERROR', 'Установите Xvfb:');
         log('ERROR', ' - Ubuntu/Debian: sudo apt install xvfb');
         log('ERROR', ' - CentOS/RHEL:   sudo dnf install xorg-x11-server-Xvfb');
         process.exit(1);
     }
 
-    // 查找可用的显示号（从 50 开始，避免与常用的冲突）
+    // Найти свободный номер дисплея (начиная с 50, чтобы не конфликтовать с популярными)
     const displayNum = findAvailableDisplay(50);
-    log('INFO', `正在启动 Xvfb 虚拟显示器 (显示号: :${displayNum})...`);
+    log('INFO', `Запуск виртуального дисплея Xvfb (номер дисплея: :${displayNum})...`);
 
-    // 移除 -xvfb 参数
+    // Удалить аргумент -xvfb
     const newArgs = originalArgs.filter(arg => arg !== '-xvfb');
 
     const xvfbArgs = [
@@ -316,7 +316,7 @@ function startInXvfb(originalArgs) {
     });
 
     xvfbProcess.on('error', (err) => {
-        log('ERROR', `Xvfb 启动失败: ${err.message}`);
+        log('ERROR', `Ошибка запуска Xvfb: ${err.message}`);
         process.exit(1);
     });
 
@@ -324,29 +324,29 @@ function startInXvfb(originalArgs) {
         process.exit(code || 0);
     });
 
-    // 处理退出信号
+    // Обработка сигналов завершения
     process.on('SIGINT', () => xvfbProcess.kill('SIGTERM'));
     process.on('SIGTERM', () => xvfbProcess.kill('SIGTERM'));
 }
 
 /**
- * 启动 VNC 服务器
- * @param {string} display - 显示器编号
+ * Запустить VNC-сервер
+ * @param {string} display - номер дисплея
  */
 async function startVncServer(display) {
     if (!checkCommand('x11vnc')) {
-        log('WARN', '未找到 x11vnc 命令，跳过 VNC 启动');
+        log('WARN', 'Команда x11vnc не найдена, запуск VNC пропущен');
         return;
     }
 
-    // 查找可用的 VNC 端口（从 5900 开始）
+    // Найти свободный VNC-порт (начиная с 5900)
     const vncPort = await findAvailablePort(5900, 100);
     if (!vncPort) {
-        log('ERROR', '无法找到可用的 VNC 端口 (5900-5999)');
+        log('ERROR', 'Не удалось найти свободный VNC-порт (5900-5999)');
         return;
     }
 
-    log('INFO', `正在启动 VNC 服务器 (端口: ${vncPort})...`);
+    log('INFO', `Запуск VNC-сервера (порт: ${vncPort})...`);
 
     const vncProcess = spawn('x11vnc', [
         '-display', display,
@@ -364,7 +364,7 @@ async function startVncServer(display) {
     });
 
     vncProcess.on('error', (err) => {
-        log('WARN', `VNC 启动失败: ${err.message}`);
+        log('WARN', `Ошибка запуска VNC: ${err.message}`);
         vncInfo.enabled = false;
     });
 
@@ -372,19 +372,19 @@ async function startVncServer(display) {
         vncInfo.enabled = false;
     });
 
-    // 更新 VNC 状态
+    // Обновить состояние VNC
     vncInfo.enabled = true;
     vncInfo.port = vncPort;
     vncInfo.display = display;
 
-    log('INFO', `VNC 服务器已启动，端口: ${vncPort}`);
+    log('INFO', `VNC-сервер запущен, порт: ${vncPort}`);
 
-    // 处理退出信号
+    // Обработка сигналов завершения
     process.on('SIGINT', () => vncProcess.kill('SIGTERM'));
     process.on('SIGTERM', () => vncProcess.kill('SIGTERM'));
 }
 
-// ==================== 主入口 ====================
+// ==================== Основная точка входа ====================
 
 async function main() {
     const args = process.argv.slice(2);
@@ -393,36 +393,36 @@ async function main() {
     const isInXvfb = process.env.XVFB_RUNNING === 'true';
     const isLinux = os.platform() === 'linux';
 
-    log('INFO', '主进程已启动');
+    log('INFO', 'Главный процесс запущен');
 
-    // 处理 Xvfb 参数（仅 Linux）
+    // Обработка аргумента Xvfb (только Linux)
     if (hasXvfb && isLinux && !isInXvfb) {
         startInXvfb(args);
         return;
     }
 
-    // 设置 xvfbMode 标识
+    // Установить флаг xvfbMode
     vncInfo.xvfbMode = isInXvfb;
 
-    // 如果在 Xvfb 中运行，启动 VNC
+    // Если работаем в Xvfb, запустить VNC
     if (isInXvfb && hasVnc) {
         const display = process.env.DISPLAY || ':99';
         await startVncServer(display);
     }
 
-    // 启动 IPC 服务器
+    // Запустить IPC-сервер
     startIpcServer();
 
-    // 启动子服务（过滤掉 -xvfb 和 -vnc 参数）
+    // Запустить дочерний сервис (отфильтровать аргументы -xvfb и -vnc)
     const serverArgs = args.filter(arg => arg !== '-xvfb' && arg !== '-vnc');
     startServer(serverArgs);
 
-    // 处理退出信号
+    // Обработка сигналов завершения
     process.on('SIGINT', stopAll);
     process.on('SIGTERM', stopAll);
 }
 
 main().catch((err) => {
-    log('ERROR', `启动失败: ${err.message}`);
+    log('ERROR', `Ошибка запуска: ${err.message}`);
     process.exit(1);
 });

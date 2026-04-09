@@ -14,7 +14,7 @@ const handleSavePool = async () => {
     await settingsStore.savePoolConfig(poolConfig.value);
 };
 
-// 获取初始数据
+// Загрузка начальных данных
 onMounted(async () => {
     await Promise.all([
         settingsStore.fetchWorkerConfig(),
@@ -23,20 +23,20 @@ onMounted(async () => {
     ]);
 });
 
-// 计算属性：适配器选项（包含 merge）
+// Вычисляемые параметры адаптеров (включая merge)
 const adapterOptions = computed(() => {
     const options = settingsStore.adaptersMeta.map(a => ({
         label: a.displayName || a.id,
         value: a.id
     }));
-    // 将 Merge 选项放在第一个位置
+    // Merge — первым в списке
     if (!options.find(o => o.value === 'merge')) {
-        options.unshift({ label: 'Merge（聚合模式）', value: 'merge' });
+        options.unshift({ label: 'Merge (агрегированный режим)', value: 'merge' });
     }
     return options;
 });
 
-// 计算属性：可聚合的适配器选项（不包含 merge，避免套娃）
+// Адаптеры без merge (без рекурсии)
 const mergeableAdapterOptions = computed(() => {
     return settingsStore.adaptersMeta
         .filter(a => a.id !== 'merge')
@@ -46,58 +46,58 @@ const mergeableAdapterOptions = computed(() => {
         }));
 });
 
-// 辅助函数：根据适配器 ID 获取 displayName
+// Вспомогательная: получить displayName по ID адаптера
 const getAdapterDisplayName = (id) => {
-    if (id === 'merge') return 'Merge（聚合模式）';
+    if (id === 'merge') return 'Merge (агрегированный режим)';
     const adapter = settingsStore.adaptersMeta.find(a => a.id === id);
     return adapter?.displayName || id;
 };
 
-// 实例列表表格列定义
+// Определение колонок таблицы
 const columns = [
     {
-        title: '实例名称',
+        title: 'Имя экземпляра',
         dataIndex: 'name',
         key: 'name',
     },
     {
-        title: 'Worker 数量',
+        title: 'Воркеров',
         dataIndex: 'workerCount',
         key: 'workerCount',
     },
     {
-        title: '代理',
+        title: 'Прокси',
         dataIndex: 'proxy',
         key: 'proxy',
     },
     {
-        title: '数据标记',
+        title: 'Метка данных',
         key: 'userDataMark',
         dataIndex: 'userDataMark',
     },
     {
-        title: '操作',
+        title: 'Действия',
         key: 'action',
     },
 ];
 
-// 实例列表数据 (从 Store 获取)
+// Данные списка из Store
 const instanceData = computed({
     get: () => settingsStore.workerConfig,
     set: (val) => { settingsStore.workerConfig = val; }
 });
 
-// 获取实例唯一标识（优先 id，没有则用 name）
+// Получите уникальный идентификатор экземпляра（优先 id，没有则用 name）
 const getInstanceKey = (inst) => inst.id || inst.name;
 
-// 批量选择
+// Выбор партии
 const selectedRowKeys = ref([]);
 const rowSelection = computed(() => ({
     selectedRowKeys: selectedRowKeys.value,
     onChange: (keys) => { selectedRowKeys.value = keys; }
 }));
 
-// 批量代理设置
+// Массовая настройка прокси
 const batchProxyVisible = ref(false);
 const batchProxyForm = ref({
     proxy: true,
@@ -145,14 +145,14 @@ const handleBatchProxySave = async () => {
     }
 };
 
-// 批量删除
+// Массовое удаление
 const handleBatchDelete = () => {
     Modal.confirm({
-        title: '批量删除实例',
-        content: `确定要删除选中的 ${selectedRowKeys.value.length} 个实例吗？此操作不可撤销。`,
-        okText: '删除',
+        title: 'Удалить экземпляры',
+        content: `Удалить ${selectedRowKeys.value.length} выбранных экземпляра? Отменить невозможно.`,
+        okText: 'Удалить',
         okType: 'danger',
-        cancelText: '取消',
+        cancelText: 'Отмена',
         async onOk() {
             const newList = (instanceData.value || []).filter(
                 inst => !selectedRowKeys.value.includes(getInstanceKey(inst))
@@ -165,11 +165,11 @@ const handleBatchDelete = () => {
     });
 };
 
-// 抽屉状态
+// Состояние панели
 const drawerOpen = ref(false);
 const editingInstance = ref(null);
 
-// 编辑表单数据
+// Данные формы редактирования
 const editForm = ref({
     name: '',
     userDataMark: '',
@@ -183,11 +183,11 @@ const editForm = ref({
     workers: []
 });
 
-// 创建实例
+// Создать экземпляр
 const handleCreateInstance = () => {
-    editingInstance.value = null; // null表示创建新实例
+    editingInstance.value = null; // null = новый экземпляр
     const randomSuffix = Math.random().toString(36).substring(2, 7);
-    // 重置表单为默认值
+    // Сбросить форму к дефолтам
     editForm.value = {
         name: `instance-${(instanceData.value || []).length + 1}-${randomSuffix}`,
         userDataMark: '',
@@ -203,10 +203,10 @@ const handleCreateInstance = () => {
     drawerOpen.value = true;
 };
 
-// 编辑实例
+// Редактировать экземпляр
 const handleEdit = (record) => {
     editingInstance.value = record;
-    // 填充表单数据
+    // Заполнить форму
     editForm.value = {
         name: record.name,
         userDataMark: record.userDataMark || '',
@@ -219,28 +219,28 @@ const handleEdit = (record) => {
         proxyPassword: record.proxy?.password || '',
         workers: record.workers ? [...record.workers] : []
     };
-    // 兼容前端展示用的 proxy 布尔值
+    // Совместимость с булевым значением прокси на фронтенде
     if (record.proxy === null || record.proxy === undefined) {
         editForm.value.proxy = false;
     }
     drawerOpen.value = true;
 };
 
-// 删除实例
+// Удалить экземпляр
 const handleDelete = async (record) => {
     const key = getInstanceKey(record);
     const newList = instanceData.value.filter(item => getInstanceKey(item) !== key);
     await settingsStore.saveWorkerConfig(newList);
 };
 
-// 保存编辑
+// Сохранить изменения
 const handleSaveEdit = async () => {
-    // 构建要保存的对象结构
+    // Построить объект для сохранения
     const instanceToSave = {
         name: editForm.value.name,
         userDataMark: editForm.value.userDataMark,
         workers: editForm.value.workers,
-        // 如果启用了代理，则构建代理对象，否则为 null
+        // Если прокси включён — создать объект, иначе null
         proxy: editForm.value.proxy ? {
             enable: true,
             type: editForm.value.proxyType,
@@ -254,10 +254,10 @@ const handleSaveEdit = async () => {
 
     let newList = [...(instanceData.value || [])];
     if (editingInstance.value === null) {
-        // 创建
+        // Создание
         newList.push(instanceToSave);
     } else {
-        // 更新 - 用唯一标识查找
+        // Обновить-Найти с уникальным идентификатором
         const editingKey = getInstanceKey(editingInstance.value);
         const index = newList.findIndex(item => getInstanceKey(item) === editingKey);
         if (index > -1) {
@@ -271,7 +271,7 @@ const handleSaveEdit = async () => {
     }
 };
 
-// 编辑中的Worker索引
+// Индекс редактируемого Worker
 const editingWorkerIndex = ref(-1);
 const workerFormVisible = ref(false);
 const workerForm = ref({
@@ -281,7 +281,7 @@ const workerForm = ref({
     mergeMonitor: ''
 });
 
-// 添加Worker
+// Добавить Worker
 const handleAddWorker = () => {
     editingWorkerIndex.value = -1;
     const randomSuffix = Math.random().toString(36).substring(2, 7);
@@ -294,7 +294,7 @@ const handleAddWorker = () => {
     workerFormVisible.value = true;
 };
 
-// 编辑Worker
+// Редактировать Worker
 const handleEditWorker = (index) => {
     editingWorkerIndex.value = index;
     const worker = editForm.value.workers[index];
@@ -307,19 +307,19 @@ const handleEditWorker = (index) => {
     workerFormVisible.value = true;
 };
 
-// 保存Worker配置
+// Сохранить конфигурацию Worker
 const handleSaveWorker = () => {
     if (editingWorkerIndex.value === -1) {
-        // 新增
+        // Добавление
         editForm.value.workers.push({ ...workerForm.value });
     } else {
-        // 编辑
+        // Редактирование
         editForm.value.workers[editingWorkerIndex.value] = { ...workerForm.value };
     }
     workerFormVisible.value = false;
 };
 
-// 删除Worker
+// Удалить Worker
 const handleRemoveWorker = (index) => {
     editForm.value.workers.splice(index, 1);
 };
@@ -327,42 +327,42 @@ const handleRemoveWorker = (index) => {
 
 <template>
     <a-layout style="background: transparent;">
-        <a-card title="负载均衡" :bordered="false" style="width: 100%; margin-bottom: 10px;">
-            <!-- 调度策略 -->
+        <a-card title="Балансировка нагрузки" :bordered="false" style="width: 100%; margin-bottom: 10px;">
+            <!-- Стратегия планирования -->
             <div style="margin-bottom: 24px;">
-                <div style="font-weight: 600; margin-bottom: 8px;">调度策略</div>
+                <div style="font-weight: 600; margin-bottom: 8px;">Стратегия</div>
                 <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 12px;">
-                    选择任务分配到工作实例的调度算法
+                    Алгоритм распределения задач по воркерам
                 </div>
                 <a-segmented v-model:value="poolConfig.strategy" block :options="[
-                    { label: '最少繁忙', value: 'least_busy' },
-                    { label: '轮询', value: 'round_robin' },
-                    { label: '随机', value: 'random' }
+                    { label: 'Наименее загруженный', value: 'least_busy' },
+                    { label: 'Циклический', value: 'round_robin' },
+                    { label: 'Случайный', value: 'random' }
                 ]" />
             </div>
 
-            <!-- 生成等待超时 -->
+            <!-- Таймаут генерации -->
             <div style="margin-bottom: 24px;">
-                <div style="font-weight: 600; margin-bottom: 8px;">生成等待超时</div>
+                <div style="font-weight: 600; margin-bottom: 8px;">Таймаут генерации</div>
                 <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 12px;">
-                    等待 AI 生成结果的最长时间，单位：秒（默认 120 秒）
+                    Максимальное время ожидания ответа AI, в секундах (по умолчанию 120)
                 </div>
                 <a-input-number v-model:value="poolConfig.waitTimeout" :min="30" :max="3600" :step="30"
-                    style="width: 100%" placeholder="请输入超时秒数">
-                    <template #addonAfter>秒</template>
+                    style="width: 100%" placeholder="Введите секунды">
+                    <template #addonAfter>с</template>
                 </a-input-number>
             </div>
 
-            <!-- 故障转移（折叠面板） -->
+            <!-- Отказоустойчивость -->
             <div style="margin-bottom: 24px;">
                 <a-collapse>
-                    <a-collapse-panel key="failover" header="故障转移">
+                    <a-collapse-panel key="failover" header="Отказоустойчивость">
                         <a-row :gutter="16">
                             <a-col :xs="24" :md="12">
                                 <div style="margin-bottom: 8px;">
-                                    <div style="font-weight: 600; margin-bottom: 8px;">启用故障转移</div>
+                                    <div style="font-weight: 600; margin-bottom: 8px;">Включить</div>
                                     <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 12px;">
-                                        启用后，任务失败时会自动切换到其他可用实例重试
+                                        При ошибке задача автоматически переключится на другой доступный воркер
                                     </div>
                                     <a-switch v-model:checked="poolConfig.failover.enabled" />
                                 </div>
@@ -370,12 +370,12 @@ const handleRemoveWorker = (index) => {
 
                             <a-col :xs="24" :md="12">
                                 <div style="margin-bottom: 8px;">
-                                    <div style="font-weight: 600; margin-bottom: 8px;">重试次数</div>
+                                    <div style="font-weight: 600; margin-bottom: 8px;">Число попыток</div>
                                     <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 12px;">
-                                        故障转移时最大重试次数，范围 1-10
+                                        Максимальное число повторных попыток, 1-10
                                     </div>
                                     <a-input-number v-model:value="poolConfig.failover.maxRetries" :min="1" :max="10"
-                                        :disabled="!poolConfig.failover.enabled" style="width: 100%" placeholder="请输入重试次数" />
+                                        :disabled="!poolConfig.failover.enabled" style="width: 100%" placeholder="Введите число попыток" />
                                 </div>
                             </a-col>
                         </a-row>
@@ -385,9 +385,9 @@ const handleRemoveWorker = (index) => {
                         <a-row :gutter="16">
                             <a-col :xs="24" :md="12">
                                 <div style="margin-bottom: 8px;">
-                                    <div style="font-weight: 600; margin-bottom: 8px;">图片下载重试</div>
+                                    <div style="font-weight: 600; margin-bottom: 8px;">Повтор загрузки изображений</div>
                                     <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 12px;">
-                                        启用后，图片/视频下载失败时会自动重试下载（不重新生成）
+                                        При ошибке загрузки изображения/видео — повторить загрузку (без повторной генерации)
                                     </div>
                                     <a-switch v-model:checked="poolConfig.failover.imgDlRetry" />
                                 </div>
@@ -395,13 +395,13 @@ const handleRemoveWorker = (index) => {
 
                             <a-col :xs="24" :md="12">
                                 <div style="margin-bottom: 8px;">
-                                    <div style="font-weight: 600; margin-bottom: 8px;">下载重试次数</div>
+                                    <div style="font-weight: 600; margin-bottom: 8px;">Число попыток загрузки</div>
                                     <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 12px;">
-                                        图片下载失败时的最大重试次数，范围 1-10
+                                        Максимальное число повторов при ошибке загрузки, 1-10
                                     </div>
                                     <a-input-number v-model:value="poolConfig.failover.imgDlRetryMaxRetries" :min="1"
                                         :max="10" :disabled="!poolConfig.failover.imgDlRetry" style="width: 100%"
-                                        placeholder="请输入下载重试次数" />
+                                        placeholder="Введите число попыток" />
                                 </div>
                             </a-col>
                         </a-row>
@@ -409,171 +409,171 @@ const handleRemoveWorker = (index) => {
                 </a-collapse>
             </div>
 
-            <!-- 保存按钮 -->
+            <!-- Кнопка сохранения -->
             <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
                 <a-button type="primary" @click="handleSavePool">
-                    保存设置
+                    Сохранить
                 </a-button>
             </div>
         </a-card>
 
 
         <a-card :bordered="false" style="width: 100%;">
-            <!-- 卡片标题和创建按钮 -->
+            <!-- Заголовок и кнопка создания -->
             <template #title>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>实例列表</span>
+                    <span>Список экземпляров</span>
                     <a-space>
                         <a-button v-if="selectedRowKeys.length > 0" @click="openBatchProxy">
-                            批量设置代理 ({{ selectedRowKeys.length }})
+                            Настройить прокси ({{ selectedRowKeys.length }})
                         </a-button>
                         <a-button v-if="selectedRowKeys.length > 0" danger @click="handleBatchDelete">
-                            批量删除 ({{ selectedRowKeys.length }})
+                            Удалить ({{ selectedRowKeys.length }})
                         </a-button>
                         <a-button type="primary" @click="handleCreateInstance">
-                            创建实例
+                            Создать экземпляр
                         </a-button>
                     </a-space>
                 </div>
             </template>
 
-            <!-- 实例表格 -->
-            <a-table :columns="columns" :data-source="instanceData" :pagination="false"
-                :row-selection="rowSelection" :row-key="record => record.id || record.name">
+            <!-- Таблица экземпляров -->
+            <a-table :columns="columns" :data-source="instanceData" :pagination="false" :row-selection="rowSelection"
+                row-key="id">
                 <template #bodyCell="{ column, record }">
-                    <!-- 实例名称 -->
+                    <!-- Имя экземпляра -->
                     <template v-if="column.key === 'name'">
                         <a>{{ record.name }}</a>
                     </template>
 
-                    <!-- Worker 数量 -->
+                    <!-- Количество воркеров -->
                     <template v-else-if="column.key === 'workerCount'">
                         {{ record.workers ? record.workers.length : 0 }}
                     </template>
 
-                    <!-- 代理状态 -->
+                    <!-- Статус прокси -->
                     <template v-else-if="column.key === 'proxy'">
                         <a-tag :color="record.proxy ? 'green' : 'default'">
-                            {{ record.proxy ? '已启用' : '未启用' }}
+                            {{ record.proxy ? 'Включён' : 'Отключён' }}
                         </a-tag>
                     </template>
 
-                    <!-- 操作列 -->
+                    <!-- Действия -->
                     <template v-else-if="column.key === 'action'">
                         <span>
-                            <a @click="handleEdit(record)">编辑</a>
+                            <a @click="handleEdit(record)">Изменить</a>
                             <a-divider type="vertical" />
-                            <a style="color: #ff4d4f" @click="handleDelete(record)">删除</a>
+                            <a style="color: #ff4d4f" @click="handleDelete(record)">Удалить</a>
                         </span>
                     </template>
                 </template>
             </a-table>
         </a-card>
 
-        <!-- 编辑/创建抽屉 -->
+        <!-- Панель создания/редактирования -->
         <a-drawer v-model:open="drawerOpen"
-            :title="editingInstance === null ? '创建实例' : `编辑实例 - ${editingInstance.name}`" placement="right" width="500">
+            :title="editingInstance === null ? 'Создать экземпляр' : `Редактировать: ${editingInstance.name}`" placement="right" width="500">
             <div style="margin-bottom: 24px;">
-                <!-- 实例名称 -->
+                <!-- Имя экземпляра -->
                 <div style="margin-bottom: 16px;">
-                    <div style="font-weight: 600; margin-bottom: 4px;">实例名称</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Имя экземпляра</div>
                     <div style="font-size: 12px; color: #ff4d4f; margin-bottom: 8px;">
-                        * 名称必须全局唯一，不可重复
+                        * Имя должно быть глобально уникальным
                     </div>
-                    <a-input v-model:value="editForm.name" placeholder="请输入实例名称" />
+                    <a-input v-model:value="editForm.name" placeholder="Введите имя экземпляра" />
                 </div>
 
-                <!-- 数据标记 -->
+                <!-- Метка данных -->
                 <div style="margin-bottom: 16px;">
-                    <div style="font-weight: 600; margin-bottom: 4px;">数据标记</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Метка данных</div>
                     <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                        用于区分实例数据存储的文件夹名称 (userDataMark)
+                        Имя папки для данных этого экземпляра (userDataMark)
                     </div>
-                    <a-input v-model:value="editForm.userDataMark" placeholder="请输入数据标记，如: main-gemini" />
+                    <a-input v-model:value="editForm.userDataMark" placeholder="Например: main-gemini" />
                 </div>
 
-                <!-- 代理设置（折叠面板） -->
+                <!-- Настройки прокси -->
                 <div style="margin-bottom: 16px;">
                     <a-collapse>
-                        <a-collapse-panel key="proxy" header="代理设置">
-                            <!-- 是否启用代理 -->
+                        <a-collapse-panel key="proxy" header="Настройки прокси">
+                            <!-- Включить прокси -->
                             <div style="margin-bottom: 16px;">
                                 <a-switch v-model:checked="editForm.proxy" />
                                 <span style="margin-left: 8px;">
-                                    {{ editForm.proxy ? '已启用代理' : '未启用代理' }}
+                                    {{ editForm.proxy ? 'Прокси включён' : 'Прокси отключён' }}
                                 </span>
                             </div>
 
-                            <!-- 代理类型 -->
+                            <!-- Тип прокси -->
                             <div style="margin-bottom: 16px;" v-if="editForm.proxy">
-                                <div style="font-weight: 600; margin-bottom: 8px;">代理类型</div>
+                                <div style="font-weight: 600; margin-bottom: 8px;">Тип прокси</div>
                                 <a-segmented v-model:value="editForm.proxyType" block :options="[
                                     { label: 'SOCKS5', value: 'socks5' },
                                     { label: 'HTTP', value: 'http' }
                                 ]" style="width: 100%" />
                             </div>
 
-                            <!-- 服务器地址 -->
+                            <!-- Адрес сервера -->
                             <div style="margin-bottom: 16px;" v-if="editForm.proxy">
-                                <div style="font-weight: 600; margin-bottom: 8px;">服务器地址</div>
-                                <a-input v-model:value="editForm.proxyHost" placeholder="例如: 127.0.0.1" />
+                                <div style="font-weight: 600; margin-bottom: 8px;">Адрес сервера</div>
+                                <a-input v-model:value="editForm.proxyHost" placeholder="Например: 127.0.0.1" />
                             </div>
 
-                            <!-- 端口 -->
+                            <!-- Порт -->
                             <div style="margin-bottom: 16px;" v-if="editForm.proxy">
-                                <div style="font-weight: 600; margin-bottom: 8px;">端口</div>
+                                <div style="font-weight: 600; margin-bottom: 8px;">Порт</div>
                                 <a-input-number v-model:value="editForm.proxyPort" :min="1" :max="65535"
-                                    style="width: 100%" placeholder="例如: 1080" />
+                                    style="width: 100%" placeholder="Например: 1080" />
                             </div>
 
-                            <!-- 是否需要验证 -->
+                            <!-- Аутентификация -->
                             <div style="margin-bottom: 16px;" v-if="editForm.proxy">
-                                <div style="font-weight: 600; margin-bottom: 8px;">身份验证</div>
+                                <div style="font-weight: 600; margin-bottom: 8px;">Аутентификация</div>
                                 <a-switch v-model:checked="editForm.proxyAuth" />
                                 <span style="margin-left: 8px;">
-                                    {{ editForm.proxyAuth ? '需要验证' : '无需验证' }}
+                                    {{ editForm.proxyAuth ? 'Требуется' : 'Не требуется' }}
                                 </span>
                             </div>
 
-                            <!-- 用户名 -->
+                            <!-- Имя пользователя -->
                             <div style="margin-bottom: 16px;" v-if="editForm.proxy && editForm.proxyAuth">
-                                <div style="font-weight: 600; margin-bottom: 8px;">用户名</div>
-                                <a-input v-model:value="editForm.proxyUsername" placeholder="请输入用户名" />
+                                <div style="font-weight: 600; margin-bottom: 8px;">Имя пользователя</div>
+                                <a-input v-model:value="editForm.proxyUsername" placeholder="Введите имя пользователя" />
                             </div>
 
-                            <!-- 密码 -->
+                            <!-- Пароль -->
                             <div style="margin-bottom: 16px;" v-if="editForm.proxy && editForm.proxyAuth">
-                                <div style="font-weight: 600; margin-bottom: 8px;">密码</div>
-                                <a-input-password v-model:value="editForm.proxyPassword" placeholder="请输入密码" />
+                                <div style="font-weight: 600; margin-bottom: 8px;">Пароль</div>
+                                <a-input-password v-model:value="editForm.proxyPassword" placeholder="Введите пароль" />
                             </div>
                         </a-collapse-panel>
                     </a-collapse>
                 </div>
 
-                <!-- Worker 列表 -->
+                <!-- Список воркеров -->
                 <div>
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="font-weight: 600;">Worker 列表</div>
+                        <div style="font-weight: 600;">Воркеры</div>
                         <a-button size="small" type="primary" @click="handleAddWorker">
-                            添加 Worker
+                            Добавить воркер
                         </a-button>
                     </div>
                     <a-list bordered :data-source="editForm.workers" style="margin-top: 8px;">
                         <template #renderItem="{ item, index }">
                             <a-list-item>
                                 <template #actions>
-                                    <a @click="handleEditWorker(index)">编辑</a>
-                                    <a style="color: #ff4d4f" @click="handleRemoveWorker(index)">删除</a>
+                                    <a @click="handleEditWorker(index)">Изменить</a>
+                                    <a style="color: #ff4d4f" @click="handleRemoveWorker(index)">Удалить</a>
                                 </template>
                                 <div>
                                     <div style="font-weight: 600;">{{ item.name }}</div>
                                     <div style="font-size: 12px; color: #8c8c8c;">
-                                        类型: {{ getAdapterDisplayName(item.type) }}
+                                        Тип: {{ getAdapterDisplayName(item.type) }}
                                         <span v-if="item.type === 'merge'">
-                                            | 聚合: {{ item.mergeTypes?.map(getAdapterDisplayName).join(', ') || '无' }}
+                                            | Агрегация: {{ item.mergeTypes?.map(getAdapterDisplayName).join(', ') || '无' }}
                                             <span v-if="item.mergeMonitor">
-                                                | 监控: {{ getAdapterDisplayName(item.mergeMonitor) }}
+                                                | Мониторинг: {{ getAdapterDisplayName(item.mergeMonitor) }}
                                             </span>
                                         </span>
                                     </div>
@@ -584,49 +584,49 @@ const handleRemoveWorker = (index) => {
                 </div>
             </div>
 
-            <!-- 抽屉底部保存按钮 -->
+            <!-- Кнопки внизу панели -->
             <template #footer>
                 <div style="text-align: right;">
-                    <a-button style="margin-right: 8px" @click="drawerOpen = false">取消</a-button>
-                    <a-button type="primary" @click="handleSaveEdit">保存</a-button>
+                    <a-button style="margin-right: 8px" @click="drawerOpen = false">Отмена</a-button>
+                    <a-button type="primary" @click="handleSaveEdit">Сохранить</a-button>
                 </div>
             </template>
         </a-drawer>
 
-        <!-- Worker配置模态框 -->
-        <a-modal v-model:open="workerFormVisible" :title="editingWorkerIndex === -1 ? '添加 Worker' : '编辑 Worker'"
-            okText="确定" cancelText="取消" @ok="handleSaveWorker">
+        <!-- Диалог конфигурации Worker -->
+        <a-modal v-model:open="workerFormVisible" :title="editingWorkerIndex === -1 ? 'Добавить воркер' : 'Редактировать воркер'"
+            okText="ОК" cancelText="Отмена" @ok="handleSaveWorker">
             <div style="margin-bottom: 16px;">
-                <div style="font-weight: 600; margin-bottom: 4px;">Worker 名称</div>
+                <div style="font-weight: 600; margin-bottom: 4px;">Имя воркера</div>
                 <div style="font-size: 12px; color: #ff4d4f; margin-bottom: 8px;">
-                    * 名称必须全局唯一，不可重复
+                    * Имя должно быть глобально уникальным
                 </div>
-                <a-input v-model:value="workerForm.name" placeholder="例如: default" />
+                <a-input v-model:value="workerForm.name" placeholder="Например: default" />
             </div>
 
             <div style="margin-bottom: 16px;">
-                <div style="font-weight: 600; margin-bottom: 8px;">适配器类型</div>
+                <div style="font-weight: 600; margin-bottom: 8px;">Тип адаптера</div>
                 <a-select v-model:value="workerForm.type" style="width: 100%" :options="adapterOptions" />
             </div>
 
-            <!-- Merge 模式额外配置 -->
+            <!-- Дополнительные параметры режима Merge -->
             <template v-if="workerForm.type === 'merge'">
                 <div style="margin-bottom: 16px;">
-                    <div style="font-weight: 600; margin-bottom: 4px;">聚合类型</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Агрегируемые адаптеры</div>
                     <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                        选择要聚合的后端适配器（可多选）
+                        Выберите адаптеры для агрегации (можно несколько)
                     </div>
                     <a-select v-model:value="workerForm.mergeTypes" mode="multiple" style="width: 100%"
-                        placeholder="选择要聚合的适配器" :options="mergeableAdapterOptions">
+                        placeholder="Выберите адаптеры" :options="mergeableAdapterOptions">
                     </a-select>
                 </div>
 
                 <div style="margin-bottom: 16px;">
-                    <div style="font-weight: 600; margin-bottom: 4px;">空闲监控后端</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Мониторинговый адаптер</div>
                     <div style="font-size: 12px; color: #8c8c8c; margin-bottom: 8px;">
-                        空闲时挂机监控的后端（可选）
+                        Адаптер для мониторинга в режиме ожидания (необязательно)
                     </div>
-                    <a-select v-model:value="workerForm.mergeMonitor" style="width: 100%" placeholder="选择监控后端（可留空）"
+                    <a-select v-model:value="workerForm.mergeMonitor" style="width: 100%" placeholder="Выберите адаптер (необязательно)"
                         allow-clear>
                         <a-select-option value="">无</a-select-option>
                         <a-select-option v-for="type in workerForm.mergeTypes" :key="type" :value="type">

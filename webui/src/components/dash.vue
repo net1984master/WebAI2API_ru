@@ -19,15 +19,15 @@ const queueData = ref([]);
 const timer = ref(null);
 const queueStats = ref({ processing: 0, waiting: 0, total: 0 });
 
-// 获取队列数据
+// Получить данные очереди
 const fetchQueue = async () => {
-    const settingsStore = useSettingsStore(); // 获取store
+    const settingsStore = useSettingsStore(); // получить store
     try {
         const res = await fetch('/admin/queue', { headers: settingsStore.getHeaders() });
         if (res.ok) {
             const data = await res.json();
 
-            // 更新统计信息
+            // Обновить статистику
             queueStats.value = {
                 processing: data.processing || 0,
                 waiting: data.waiting || 0,
@@ -39,7 +39,7 @@ const fetchQueue = async () => {
             queueData.value = [...processing, ...waiting];
         }
     } catch (e) {
-        console.error('Fetch queue failed', e);
+        console.error('Ошибка получения очереди', e);
     }
 };
 
@@ -55,9 +55,9 @@ const formatUptime = (seconds) => {
     const d = Math.floor(seconds / (3600 * 24));
     const h = Math.floor((seconds % (3600 * 24)) / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    if (d > 0) return `${d}天 ${h}小时 ${m}分`;
-    if (h > 0) return `${h}小时 ${m}分`;
-    return `${m}分`;
+    if (d > 0) return `${d}д ${h}ч ${m}м`;
+    if (h > 0) return `${h}ч ${m}м`;
+    return `${m}м`;
 };
 
 const formatMemory = (mb) => {
@@ -69,24 +69,24 @@ const formatMemory = (mb) => {
 };
 
 const getLoadColor = (usage) => {
-    if (usage < 50) return '#52c41a'; // 绿色
-    if (usage < 80) return '#faad14'; // 橙色
-    return '#f5222d'; // 红色
+    if (usage < 50) return '#52c41a'; // зелёный
+    if (usage < 80) return '#faad14'; // оранжевый
+    return '#f5222d'; // красный
 };
 
-// 状态映射
+// Сопоставление статусов
 const getStatusConfig = (status) => {
     const map = {
-        'normal': { color: 'green', text: '正常模式 (Normal)' },
-        'headless': { color: 'blue', text: '无头模式 (Headless)' },
-        'xvfb': { color: 'purple', text: '虚拟显示 (Xvfb)' }
+        'normal': { color: 'green', text: 'Обычный режим' },
+        'headless': { color: 'blue', text: 'Headless-режим' },
+        'xvfb': { color: 'purple', text: 'Виртуальный дисплей (Xvfb)' }
     };
-    return map[status] || { color: 'red', text: '未运行' };
+    return map[status] || { color: 'red', text: 'Не запущен' };
 };
 
 onMounted(() => {
     refreshData();
-    timer.value = setInterval(refreshData, 5000); // 每5秒轮询
+    timer.value = setInterval(refreshData, 5000); // Опрос каждые 5 сек
 });
 
 onUnmounted(() => {
@@ -96,47 +96,47 @@ onUnmounted(() => {
 
 <template>
     <a-layout style="width: 100%; background: transparent;">
-        <!-- 安全模式告警横幅 -->
+        <!-- Баннер безопасного режима -->
         <a-alert v-if="systemStore.safeMode?.enabled" type="error" show-icon style="margin-bottom: 16px;" closable>
             <template #message>
-                <span style="font-weight: 600;">⚠️ 安全模式</span>
+                <span style="font-weight: 600;">⚠️ Безопасный режим</span>
             </template>
             <template #description>
                 <div>
                     <p style="margin-bottom: 8px;">
-                        服务因初始化失败进入安全模式，OpenAI API 不可用。
+                        Сервис перешёл в безопасный режим из-за ошибки инициализации. OpenAI API недоступен.
                     </p>
                     <p style="margin-bottom: 8px; color: #cf1322;">
-                        <b>原因：</b>{{ systemStore.safeMode.reason }}
+                        <b>Причина:</b> {{ systemStore.safeMode.reason }}
                     </p>
                     <p style="margin: 0;">
-                        请前往「系统设置」修改正确的配置后重启服务。
+                        Перейдите в «Настройки», исправьте конфигурацию и перезапустите сервис.
                     </p>
                 </div>
             </template>
         </a-alert>
 
-        <!-- 响应式布局：手机竖向，电脑横向 -->
+        <!-- Адаптивная раскладка -->
         <a-row :gutter="[16, 16]" style="margin-bottom: 24px">
-            <!-- 系统信息卡片 -->
+            <!-- Карточка системы -->
             <a-col :xs="24" :md="12">
-                <a-card title="系统状态" :bordered="false" style="height: 100%">
+                <a-card title="Состояние системы" :bordered="false" style="height: 100%">
                     <a-space direction="vertical" style="width: 100%" size="middle">
                         <div style="display: flex; justify-content: space-between;">
                             <span>
-                                <DesktopOutlined /> 系统版本:
+                                <DesktopOutlined /> Версия системы:
                             </span>
                             <b>{{ systemStore.systemVersion }}</b>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
                             <span>
-                                <FieldTimeOutlined /> 运行时间:
+                                <FieldTimeOutlined /> Время работы:
                             </span>
                             <b>{{ formatUptime(systemStore.uptime) }}</b>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
                             <span>
-                                <ChromeOutlined /> 状态:
+                                <ChromeOutlined /> Статус:
                             </span>
                             <a-tag :color="getStatusConfig(systemStore.status).color">
                                 {{ getStatusConfig(systemStore.status).text }}
@@ -146,7 +146,7 @@ onUnmounted(() => {
                         <div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                 <span>
-                                    <LineChartOutlined /> CPU 使用率:
+                                    <LineChartOutlined /> Загрузка CPU:
                                 </span>
                                 <span>{{ systemStore.cpuUsage }}%</span>
                             </div>
@@ -157,7 +157,7 @@ onUnmounted(() => {
                         <div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                 <span>
-                                    <PieChartOutlined /> 内存使用:
+                                    <PieChartOutlined /> Оперативная память:
                                 </span>
                                 <span>{{ formatMemory(systemStore.memoryUsage.used) }} / {{
                                     formatMemory(systemStore.memoryUsage.total) }}</span>
@@ -171,35 +171,35 @@ onUnmounted(() => {
                 </a-card>
             </a-col>
 
-            <!-- 统计数据卡片 -->
+            <!-- Карточка статистики -->
             <a-col :xs="24" :md="12">
-                <a-card title="业务统计" :bordered="false" style="height: 100%">
+                <a-card title="Статистика" :bordered="false" style="height: 100%">
                     <a-row :gutter="16" style="margin-bottom: 24px">
                         <a-col :span="12">
-                            <a-statistic title="窗口数量" :value="systemStore.stats.workers || 0">
+                            <a-statistic title="Воркеров" :value="systemStore.stats.workers || 0">
                                 <template #suffix>
-                                    <span style="font-size: 14px; color: #8c8c8c;">个</span>
+                                    <span style="font-size: 14px; color: #8c8c8c;">шт.</span>
                                 </template>
                             </a-statistic>
                         </a-col>
                         <a-col :span="12">
-                            <a-statistic title="实例数量" :value="systemStore.stats.instances || 0">
+                            <a-statistic title="Экземпляров" :value="systemStore.stats.instances || 0">
                                 <template #suffix>
-                                    <span style=" font-size: 14px; color: #8c8c8c;">个</span>
+                                    <span style=" font-size: 14px; color: #8c8c8c;">шт.</span>
                                 </template>
                             </a-statistic>
                         </a-col>
                     </a-row>
                     <a-row :gutter="16">
                         <a-col :span="12">
-                            <a-statistic title="正在进行" :value="queueStats.processing">
+                            <a-statistic title="В обработке" :value="queueStats.processing">
                                 <template #suffix>
                                     <span style="font-size: 14px; color: #8c8c8c;">/ {{ queueStats.total }}</span>
                                 </template>
                             </a-statistic>
                         </a-col>
                         <a-col :span="12">
-                            <a-statistic title="等待排队" :value="queueStats.waiting">
+                            <a-statistic title="В очереди" :value="queueStats.waiting">
                                 <template #suffix>
                                     <span style="font-size: 14px; color: #8c8c8c;">/ {{ queueStats.total }}</span>
                                 </template>
@@ -208,14 +208,14 @@ onUnmounted(() => {
                     </a-row>
                     <a-row :gutter="16" style="margin-top: 16px">
                         <a-col :span="12">
-                            <a-statistic title="今日成功" :value="systemStore.stats.success || 0">
+                            <a-statistic title="Успешно сегодня" :value="systemStore.stats.success || 0">
                                 <template #prefix>
                                     <CheckCircleOutlined style="color: #52c41a" />
                                 </template>
                             </a-statistic>
                         </a-col>
                         <a-col :span="12">
-                            <a-statistic title="今日失败" :value="systemStore.stats.failed || 0">
+                            <a-statistic title="Ошибок сегодня" :value="systemStore.stats.failed || 0">
                                 <template #prefix>
                                     <CloseCircleOutlined style="color: #ff4d4f" />
                                 </template>
@@ -226,11 +226,11 @@ onUnmounted(() => {
             </a-col>
         </a-row>
 
-        <!-- 任务队列列表 -->
-        <a-card title="任务队列实时监控" :bordered="false" style="width: 100%" :bodyStyle="{ padding: '0 24px' }">
+        <!-- Список очереди -->
+        <a-card title="Мониторинг очереди" :bordered="false" style="width: 100%" :bodyStyle="{ padding: '0 24px' }">
             <template #extra>
                 <div style="color: #8c8c8c; font-size: 12px;">
-                    <SyncOutlined :spin="true" style="margin-right: 4px" /> 实时刷新中
+                    <SyncOutlined :spin="true" style="margin-right: 4px" /> Обновляется
                 </div>
             </template>
             <a-list item-layout="horizontal" :data-source="queueData">
@@ -248,25 +248,25 @@ onUnmounted(() => {
                                 <template #icon>
                                     <SyncOutlined :spin="true" />
                                 </template>
-                                进行中
+                                В обработке
                             </a-tag>
                             <a-tag v-else-if="item.status === 'waiting'" color="warning">
                                 <template #icon>
                                     <ExclamationCircleOutlined />
                                 </template>
-                                等待中
+                                В очереди
                             </a-tag>
                             <a-tag v-else-if="item.status === 'success'" color="success">
                                 <template #icon>
                                     <CheckCircleOutlined />
                                 </template>
-                                已完成
+                                Завершено
                             </a-tag>
                         </div>
                     </a-list-item>
                 </template>
                 <div v-if="queueData.length === 0" style="text-align: center; padding: 24px; color: #8c8c8c;">
-                    暂无任务
+                    Нет задач
                 </div>
             </a-list>
         </a-card>
