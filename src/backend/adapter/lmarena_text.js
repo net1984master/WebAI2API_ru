@@ -1,5 +1,5 @@
 /**
- * @fileoverview LMArena 文本生成适配器
+ * @fileoverview Адаптер генерации текста LMArena
  */
 
 import {
@@ -17,40 +17,40 @@ import {
 } from '../utils/index.js';
 import { logger } from '../../utils/logger.js';
 
-// --- 配置常量 ---
+// --- Константы конфигурации ---
 const TARGET_URL = 'https://arena.ai/text/direct';
 const TARGET_URL_SEARCH = 'https://arena.ai/search/direct';
 
 /**
- * 执行生图任务
- * @param {object} context - 浏览器上下文 { page, client }
- * @param {string} prompt - 提示词
- * @param {string[]} imgPaths - 图片路径数组
- * @param {string} [modelId] - 指定的模型 ID (可选)
- * @param {object} [meta={}] - 日志元数据
- * @returns {Promise<{image?: string, text?: string, error?: string}>} 生成结果
+ * Выполнение задачи генерации
+ * @param {object} context - Контекст браузера { page, client }
+ * @param {string} prompt - Промпт (подсказка)
+ * @param {string[]} imgPaths - Массив путей к изображениям
+ * @param {string} [modelId] - Указанный ID модели (необязательно)
+ * @param {object} [meta={}] - Метаданные для логирования
+ * @returns {Promise<{image?: string, text?: string, error?: string}>} Результат генерации
  */
 async function generate(context, prompt, imgPaths, modelId, meta = {}) {
     const { page, config } = context;
     const waitTimeout = config?.backend?.pool?.waitTimeout ?? 120000;
     const textareaSelector = 'textarea';
 
-    // Worker 已验证，直接解析模型配置
+    // Worker уже проверен, сразу разбираем конфигурацию модели
     const modelConfig = manifest.models.find(m => m.id === modelId);
     const { search } = modelConfig || {};
     const targetUrl = search ? TARGET_URL_SEARCH : TARGET_URL;
 
     try {
-        logger.info('适配器', `开启新会话... (搜索模式: ${!!search})`, meta);
+        logger.info('Адаптер', `Открытие новой сессии... (режим поиска: ${!!search})`, meta);
         await gotoWithCheck(page, targetUrl);
 
-        // 1. 等待输入框加载
+        // 1. Ожидание загрузки поля ввода
         await waitForInput(page, textareaSelector, { click: false });
 
-        // 2. 选择模型
+        // 2. Выбор модели
         if (modelId) {
-            logger.debug('适配器', `选择模型: ${modelId}`, meta);
-            // 使用键盘导航展开模型选择框：按两次 Shift+Tab 然后 Enter
+            logger.debug('Адаптер', `Выбор модели: ${modelId}`, meta);
+            // Используем клавиатурную навигацию для раскрытия выбора модели: дважды Shift+Tab, затем Enter
             await page.keyboard.down('Shift');
             await page.keyboard.press('Tab');
             await page.keyboard.press('Tab');
@@ -58,16 +58,16 @@ async function generate(context, prompt, imgPaths, modelId, meta = {}) {
             await sleep(100, 200);
             await page.keyboard.press('Enter');
 
-            // 获取模型配置，优先使用 codeName，否则使用 id
+            // Получаем конфигурацию модели, приоритет у codeName, иначе используем id
             const searchText = modelConfig?.codeName || modelId;
 
-            // 模拟粘贴输入模型名称
+            // Имитируем вставку для ввода имени модели
             await page.evaluate((text) => {
                 document.execCommand('insertText', false, text);
             }, searchText);
 
-            // 等待过滤完成：第一个选项包含目标模型的主 ID
-            // searchText 可能是 codeName（含括号说明），但过滤后的选项应该包含 modelId
+            // Ожидание завершения фильтрации: первый вариант содержит основной ID целевой модели
+            // searchText может быть codeName (с пояснением в скобках), но отфильтрованный вариант должен содержать modelId
             try {
                 await page.waitForFunction(
                     (targetId) => {
@@ -78,27 +78,27 @@ async function generate(context, prompt, imgPaths, modelId, meta = {}) {
                     { timeout: 5000 }
                 );
             } catch {
-                // 超时也继续，可能列表结构不同
-                logger.debug('适配器', `等待模型选项过滤超时，继续执行`, meta);
+                // При таймауте продолжаем — возможно, структура списка отличается
+                logger.debug('Адаптер', `Таймаут ожидания фильтрации вариантов модели, продолжаем выполнение`, meta);
             }
             await sleep(300, 500);
             await page.keyboard.press('Enter');
         }
 
-        // 3. 上传图片
+        // 3. Загрузка изображений
         if (imgPaths && imgPaths.length > 0) {
-            logger.info('适配器', `开始上传 ${imgPaths.length} 张图片`, meta);
+            logger.info('Адаптер', `Начинаем загрузку ${imgPaths.length} изображений`, meta);
             await pasteImages(page, textareaSelector, imgPaths, {}, meta);
-            logger.info('适配器', '图片上传完成', meta);
+            logger.info('Адаптер', 'Загрузка изображений завершена', meta);
         }
 
-        // 4. 填写提示词
+        // 4. Заполнение промпта
         await safeClick(page, textareaSelector, { bias: 'input' });
-        logger.info('适配器', '输入提示词...', meta);
+        logger.info('Адаптер', 'Ввод промпта...', meta);
         await humanType(page, textareaSelector, prompt);
 
-        // 5. 先启动 API 监听
-        logger.debug('适配器', '启动 API 监听...', meta);
+        // 5. Сначала запускаем прослушивание API
+        logger.debug('Адаптер', 'Запуск прослушивания API...', meta);
         const responsePromise = waitApiResponse(page, {
             urlMatch: '/nextjs-api/stream',
             method: 'POST',
@@ -106,40 +106,40 @@ async function generate(context, prompt, imgPaths, modelId, meta = {}) {
             meta
         });
 
-        // 6. 发送提示词
-        logger.info('适配器', '发送提示词...', meta);
+        // 6. Отправка промпта
+        logger.info('Адаптер', 'Отправка промпта...', meta);
         await safeClick(page, 'button[type="submit"]', { bias: 'button' });
 
-        logger.info('适配器', '等待生成结果...', meta);
+        logger.info('Адаптер', 'Ожидание результата генерации...', meta);
 
-        // 7. 等待 API 响应
+        // 7. Ожидание ответа API
         let response;
         try {
             response = await responsePromise;
         } catch (e) {
-            // 使用公共错误处理
+            // Используем общую обработку ошибок
             const pageError = normalizePageError(e, meta);
             if (pageError) return pageError;
             throw e;
         }
 
-        // 7. 解析响应结果
+        // 7. Разбор результата ответа
         const content = await response.text();
 
-        // 8. 检查 HTTP 错误
+        // 8. Проверка HTTP-ошибок
         const httpError = normalizeHttpError(response, content);
         if (httpError) {
-            logger.error('适配器', `请求生成时返回错误: ${httpError.error}`, meta);
-            return { error: `请求生成时返回错误: ${httpError.error}` };
+            logger.error('Адаптер', `Ошибка при запросе генерации: ${httpError.error}`, meta);
+            return { error: `Ошибка при запросе генерации: ${httpError.error}` };
         }
 
-        // 9. 解析文本流
-        // SSE 格式说明:
-        // - a0: 回复内容（最终文本）
-        // - ag: 思考过程 (thinking/reasoning) - 仅 thinking 模型有
-        // - a2: 心跳 [{"type":"heartbeat"}]
-        // - ad: 结束标记 {"finishReason":"stop"}
-        // 示例:
+        // 9. Разбор текстового потока
+        // Описание формата SSE:
+        // - a0: содержимое ответа (финальный текст)
+        // - ag: процесс размышления (thinking/reasoning) — только у thinking-моделей
+        // - a2: heartbeat (пульс) [{"type":"heartbeat"}]
+        // - ad: маркер завершения {"finishReason":"stop"}
+        // Пример:
         // ag:"Let me think..."
         // a0:"Hello"
         // a0:" World"
@@ -154,60 +154,60 @@ async function generate(context, prompt, imgPaths, modelId, meta = {}) {
                     const textPart = JSON.parse(line.substring(3));
                     fullText += textPart;
                 } catch (e) {
-                    logger.warn('适配器', `解析文本块失败: ${line}`, meta);
+                    logger.warn('Адаптер', `Не удалось разобрать текстовый блок: ${line}`, meta);
                 }
             } else if (line.startsWith('ag:')) {
-                // 思考过程内容
+                // Содержимое процесса размышления
                 try {
                     const thinkPart = JSON.parse(line.substring(3));
                     thinkingText += thinkPart;
                 } catch (e) {
-                    logger.warn('适配器', `解析思考块失败: ${line}`, meta);
+                    logger.warn('Адаптер', `Не удалось разобрать блок размышлений: ${line}`, meta);
                 }
             }
         }
 
         if (fullText) {
-            logger.info('适配器', `获取文本成功，长度: ${fullText.length}`, meta);
+            logger.info('Адаптер', `Текст успешно получен, длина: ${fullText.length}`, meta);
             const result = { text: fullText };
-            // 如果有思考过程，添加到 reasoning 字段
+            // Если есть процесс размышления, добавляем в поле reasoning
             if (thinkingText.trim()) {
-                logger.info('适配器', `获取思考过程，长度: ${thinkingText.length}`, meta);
+                logger.info('Адаптер', `Процесс размышления получен, длина: ${thinkingText.length}`, meta);
                 result.reasoning = thinkingText;
             }
             return result;
         } else {
-            logger.warn('适配器', '未解析到有效文本内容', { ...meta, preview: content.substring(0, 150) });
-            // 如果没解析到 a0，尝试直接返回原始内容防空
-            return { error: '未解析到有效文本内容' };
+            logger.warn('Адаптер', 'Не удалось извлечь валидное текстовое содержимое', { ...meta, preview: content.substring(0, 150) });
+            // Если a0 не разобран, пытаемся вернуть исходное содержимое во избежание пустоты
+            return { error: 'Не удалось извлечь валидное текстовое содержимое' };
         }
 
     } catch (err) {
-        // 顶层错误处理
+        // Обработка ошибок верхнего уровня
         const pageError = normalizePageError(err, meta);
         if (pageError) return pageError;
 
-        logger.error('适配器', '生成任务失败', { ...meta, error: err.message });
-        return { error: `生成任务失败: ${err.message}` };
+        logger.error('Адаптер', 'Задача генерации завершилась с ошибкой', { ...meta, error: err.message });
+        return { error: `Задача генерации завершилась с ошибкой: ${err.message}` };
     } finally { }
 }
 
 /**
- * 适配器 manifest
+ * Манифест адаптера
  */
 export const manifest = {
     id: 'lmarena_text',
-    displayName: 'LMArena (文本生成)',
-    description: '使用 LMArena 平台生成文本，支持多种大语言模型和搜索模式。需要已登录的 LMArena 账户，若不登录会频繁弹出人机验证码且有速率限制。',
+    displayName: 'LMArena (генерация текста)',
+    description: 'Использует платформу LMArena для генерации текста, поддерживает множество больших языковых моделей и режим поиска. Требуется авторизованный аккаунт LMArena; без авторизации часто появляется CAPTCHA и действуют ограничения частоты запросов.',
 
-    // 入口 URL
+    // URL входной точки
     getTargetUrl(config, workerConfig) {
         return TARGET_URL;
     },
 
-    // 模型列表
+    // Список моделей
     models: [
-        // --- 文本模型 ---
+        // --- Текстовые модели ---
         { id: 'claude-opus-4-6-thinking', imagePolicy: 'forbidden', type: 'text' },
         { id: 'claude-opus-4-6', imagePolicy: 'forbidden', type: 'text' },
         { id: 'gemini-3-pro', imagePolicy: 'optional', type: 'text' },
@@ -339,7 +339,7 @@ export const manifest = {
         { id: 'minimax-m2-preview', imagePolicy: 'forbidden', type: 'text' },
         { id: 'qwen3-max-thinking', imagePolicy: 'forbidden', type: 'text' },
 
-        // --- 搜索模型 ---
+        // --- Модели поиска ---
         { id: 'grok-4.20-beta1', imagePolicy: 'forbidden', type: 'text', search: true },
         { id: 'gpt-5.2-search', imagePolicy: 'forbidden', type: 'text', search: true },
         { id: 'gemini-3-flash-grounding', imagePolicy: 'forbidden', type: 'text', search: true },
@@ -362,9 +362,9 @@ export const manifest = {
         { id: 'gpt-5.1-search-sp', imagePolicy: 'forbidden', type: 'text', search: true },
     ],
 
-    // 无需导航处理器
+    // Обработчики навигации не требуются
     navigationHandlers: [],
 
-    // 核心生图方法
+    // Основной метод генерации
     generate
 };
