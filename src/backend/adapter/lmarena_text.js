@@ -22,6 +22,20 @@ const TARGET_URL = 'https://arena.ai/text/direct';
 const TARGET_URL_SEARCH = 'https://arena.ai/search/direct';
 
 /**
+ * Текст ошибки генерации, отображаемый в UI страницы в блоке:
+ * <p class="text-interactive-negative text-center text-xs font-medium sm:text-left sm:text-sm">
+ * При его обнаружении генерация немедленно прерывается с ошибкой.
+ */
+const GENERATION_ERROR_TEXT = 'Something went wrong while generating the response. Please try again.';
+
+/**
+ * Таймаут ожидания ручного решения CAPTCHA пользователем (10 минут).
+ * Когда в ответе API обнаруживается CAPTCHA, адаптер не прерывает работу,
+ * а ждёт, пока пользователь решит её вручную, и затем перехватывает повторный запрос фронтенда.
+ */
+const CAPTCHA_WAIT_TIMEOUT = 10 * 60 * 1000;
+
+/**
  * Выполнение задачи генерации
  * @param {object} context - Контекст браузера { page, client }
  * @param {string} prompt - Промпт (подсказка)
@@ -103,6 +117,7 @@ async function generate(context, prompt, imgPaths, modelId, meta = {}) {
             urlMatch: '/nextjs-api/stream',
             method: 'POST',
             timeout: waitTimeout,
+            errorText: GENERATION_ERROR_TEXT,
             meta
         });
 
@@ -124,13 +139,33 @@ async function generate(context, prompt, imgPaths, modelId, meta = {}) {
         }
 
         // 7. Разбор результата ответа
-        const content = await response.text();
+        let content = await response.text();
 
         // 8. Проверка HTTP-ошибок
         const httpError = normalizeHttpError(response, content);
         if (httpError) {
-            logger.error('Адаптер', `Ошибка при запросе генерации: ${httpError.error}`, meta);
-            return { error: `Ошибка при запросе генерации: ${httpError.error}` };
+            // Если это CAPTCHA — не прерываемся: ждём ручного решения и перехватываем повторный запрос фронтенда
+            if (httpError.error?.toLowerCase().includes('captcha')) {
+                logger.warn('Адаптер', 'Обнаружена CAPTCHA — генерация приостановлена. Решите капчу вручную в браузере, после чего выполнение продолжится автоматически (таймаут: 10 мин.)...', meta);
+                const retryPromise = waitApiResponse(page, {
+                    urlMatch: '/nextjs-api/stream',
+                    method: 'POST',
+                    timeout: CAPTCHA_WAIT_TIMEOUT,
+                    errorText: GENERATION_ERROR_TEXT,
+                    meta
+                });
+                try {
+                    response = await retryPromise;
+                    content = await response.text();
+                } catch (e) {
+                    const pageError = normalizePageError(e, meta);
+                    if (pageError) return pageError;
+                    throw e;
+                }
+            } else {
+                logger.error('Адаптер', `Ошибка при запросе генерации: ${httpError.error}`, meta);
+                return { error: `Ошибка при запросе генерации: ${httpError.error}` };
+            }
         }
 
         // 9. Разбор текстового потока
